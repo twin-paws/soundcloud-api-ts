@@ -2,8 +2,10 @@ const BASE_URL = "https://api.soundcloud.com";
 
 export interface RequestOptions {
   path: string;
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "PUT" | "DELETE";
   token?: string;
+  body?: Record<string, unknown> | FormData;
+  contentType?: string;
 }
 
 /**
@@ -20,9 +22,23 @@ export async function scFetch<T>(options: RequestOptions): Promise<T> {
     headers["Authorization"] = `OAuth ${options.token}`;
   }
 
+  let fetchBody: string | FormData | undefined;
+  if (options.body) {
+    if (options.body instanceof FormData) {
+      fetchBody = options.body;
+      // Don't set Content-Type for FormData — browser/node sets boundary automatically
+    } else {
+      headers["Content-Type"] = options.contentType ?? "application/json";
+      fetchBody = JSON.stringify(options.body);
+    }
+  } else if (options.contentType) {
+    headers["Content-Type"] = options.contentType;
+  }
+
   const response = await fetch(url, {
     method: options.method,
     headers,
+    body: fetchBody,
     redirect: "manual",
   });
 
@@ -31,6 +47,11 @@ export async function scFetch<T>(options: RequestOptions): Promise<T> {
     if (location) {
       return location as T;
     }
+  }
+
+  // 200-204 with no content
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
   }
 
   if (!response.ok) {

@@ -1,10 +1,17 @@
 export type {
   SoundCloudToken,
   SoundCloudUser,
+  SoundCloudMe,
+  SoundCloudQuota,
   SoundCloudSubscription,
   SoundCloudSubscriptionProduct,
   SoundCloudTrack,
   SoundCloudPlaylist,
   SoundCloudComment,
+  SoundCloudCommentUser,
+  SoundCloudStreams,
+  SoundCloudWebProfile,
+  SoundCloudActivity,
+  SoundCloudActivitiesResponse,
   SoundCloudPaginatedResponse,
 } from "./api.js";

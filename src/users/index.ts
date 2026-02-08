@@ -6,3 +6,4 @@ export { getUserTracks } from "./getTracks.js";
 export { getUserPlaylists } from "./getPlaylists.js";
 export { getUserLikesTracks } from "./getLikesTracks.js";
 export { getUserLikesPlaylists } from "./getLikesPlaylists.js";
+export { getUserWebProfiles } from "./getWebProfiles.js";

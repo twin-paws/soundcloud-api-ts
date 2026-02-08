@@ -1,5 +1,5 @@
 import { scFetch } from "../client/http.js";
-import type { SoundCloudUser } from "../types/api.js";
+import type { SoundCloudMe } from "../types/api.js";
 
-export const getMe = (token: string): Promise<SoundCloudUser> =>
-  scFetch<SoundCloudUser>({ path: "/me", method: "GET", token });
+export const getMe = (token: string): Promise<SoundCloudMe> =>
+  scFetch<SoundCloudMe>({ path: "/me", method: "GET", token });

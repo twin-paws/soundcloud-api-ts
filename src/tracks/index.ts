@@ -1,6 +1,12 @@
 export { getTrack } from "./getTrack.js";
 export { getTrackComments } from "./getComments.js";
+export { createTrackComment } from "./createComment.js";
 export { getTrackLikes } from "./getLikes.js";
 export { getTrackReposts } from "./getReposts.js";
 export { getRelatedTracks } from "./getRelated.js";
+export { getTrackStreams } from "./getStreams.js";
 export { likeTrack } from "./likeTrack.js";
+export { unlikeTrack } from "./unlikeTrack.js";
+export { updateTrack } from "./updateTrack.js";
+export type { UpdateTrackParams } from "./updateTrack.js";
+export { deleteTrack } from "./deleteTrack.js";
