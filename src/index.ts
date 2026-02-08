@@ -24,7 +24,7 @@ export type {
 } from "./types/api.js";
 
 // Auth
-export { getClientToken, getUserToken, refreshUserToken, signOut } from "./auth/index.js";
+export { getClientToken, getUserToken, refreshUserToken, signOut, getAuthorizationUrl, generateCodeVerifier, generateCodeChallenge } from "./auth/index.js";
 
 // Users
 export { getMe, getUser, getFollowers, getFollowings, getUserTracks, getUserPlaylists, getUserLikesTracks, getUserLikesPlaylists, getUserWebProfiles } from "./users/index.js";
