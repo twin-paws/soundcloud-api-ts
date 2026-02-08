@@ -1,17 +1,21 @@
-# soundcloud-api-client
+# soundcloud-api-ts
+
+[![npm version](https://img.shields.io/npm/v/soundcloud-api-ts)](https://www.npmjs.com/package/soundcloud-api-ts)
+[![npm downloads](https://img.shields.io/npm/dm/soundcloud-api-ts)](https://www.npmjs.com/package/soundcloud-api-ts)
+[![license](https://img.shields.io/npm/l/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-client/blob/main/LICENSE)
 
 A TypeScript client for the SoundCloud API. Zero dependencies, uses native `fetch` (Node 18+).
 
 ## Install
 
 ```bash
-npm install soundcloud-api-client
+npm install soundcloud-api-ts
 ```
 
 ## Quick Start
 
 ```ts
-import { SoundCloudClient } from "soundcloud-api-client";
+import { SoundCloudClient } from "soundcloud-api-ts";
 
 const sc = new SoundCloudClient({
   clientId: "your-client-id",
@@ -33,7 +37,7 @@ const streams = await sc.tracks.getStreams(123456);
 ## OAuth 2.0 Flow
 
 ```ts
-import { SoundCloudClient, generateCodeVerifier, generateCodeChallenge } from "soundcloud-api-client";
+import { SoundCloudClient, generateCodeVerifier, generateCodeChallenge } from "soundcloud-api-ts";
 
 const sc = new SoundCloudClient({
   clientId: "...",
@@ -171,7 +175,7 @@ import {
   getClientToken, getUserToken, getAuthorizationUrl,
   generateCodeVerifier, generateCodeChallenge,
   getMe, searchTracks,
-} from "soundcloud-api-client";
+} from "soundcloud-api-ts";
 
 const token = await getClientToken("clientId", "clientSecret");
 const me = await getMe(token.access_token);
@@ -199,7 +203,7 @@ import type {
   SoundCloudActivitiesResponse,
   SoundCloudPaginatedResponse,
   TokenOption,
-} from "soundcloud-api-client/types";
+} from "soundcloud-api-ts/types";
 ```
 
 ## PKCE (Proof Key for Code Exchange)
@@ -207,7 +211,7 @@ import type {
 For public clients (SPAs, mobile apps), use PKCE:
 
 ```ts
-import { generateCodeVerifier, generateCodeChallenge } from "soundcloud-api-client";
+import { generateCodeVerifier, generateCodeChallenge } from "soundcloud-api-ts";
 
 const verifier = generateCodeVerifier();
 const challenge = await generateCodeChallenge(verifier);
@@ -233,7 +237,7 @@ interface SoundCloudPaginatedResponse<T> {
 ## Utilities
 
 ```ts
-import { getSoundCloudWidgetUrl } from "soundcloud-api-client";
+import { getSoundCloudWidgetUrl } from "soundcloud-api-ts";
 
 // Generate a SoundCloud embed widget URL
 const widgetUrl = getSoundCloudWidgetUrl(trackId);
