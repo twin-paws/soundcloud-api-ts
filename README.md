@@ -25,14 +25,23 @@ A fully-typed TypeScript client for the SoundCloud API. Zero dependencies, nativ
 
 ## Comparison
 
-| Feature | soundcloud-api-ts | soundcloud.ts | node-soundcloud |
+| Feature | soundcloud-api-ts | soundcloud.ts | soundcloud-fetch |
 | --- | --- | --- | --- |
-| TypeScript | ✅ Native | ✅ | ❌ |
-| Dependencies | 0 | varies | varies |
-| OAuth 2.0 | ✅ Full | Partial | Partial |
-| Auto token refresh | ✅ | ❌ | ❌ |
-| PKCE | ✅ | ❌ | ❌ |
-| Maintained | ✅ 2026 | — | — |
+| TypeScript | ✅ Native | ✅ | ✅ |
+| Dependencies | **0** | 1 | 3 (lodash, cookie, undici) |
+| Auth method | **Official OAuth 2.0** | ⚠️ Scrape client ID from browser | ⚠️ Scrape client ID from browser |
+| PKCE support | ✅ | ❌ | ❌ |
+| Auto token refresh | ✅ on 401 | ❌ | ❌ |
+| Auto retry (429/5xx) | ✅ exponential backoff | ❌ | ❌ |
+| CLI tool | ✅ `sc-cli` | ❌ | ❌ |
+| Pagination helpers | ✅ async iterators | ❌ | ✅ |
+| Typed errors | ✅ `SoundCloudError` | ❌ | ❌ |
+| Test coverage | **94%** | — | — |
+| API docs site | ✅ [TypeDoc](https://twin-paws.github.io/soundcloud-api-ts/) | ✅ | ❌ |
+| LLM/AI-friendly | ✅ llms.txt + AGENTS.md | ❌ | ❌ |
+| Maintained | ✅ 2026 | ✅ 2025 | ✅ 2026 |
+
+> **Why does auth method matter?** `soundcloud.ts` and `soundcloud-fetch` require you to open browser dev tools, inspect network traffic, and manually copy your client ID — which can break anytime SoundCloud changes their frontend. `soundcloud-api-ts` uses the **official OAuth 2.0 API** with registered app credentials, PKCE for public clients, and automatic token refresh.
 
 ## Install
 
