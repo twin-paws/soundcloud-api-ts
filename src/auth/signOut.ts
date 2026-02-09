@@ -1,8 +1,18 @@
 /**
- * POST /sign-out — invalidates session associated with current token.
+ * Invalidate the session associated with an access token.
  *
  * **Note:** This hits `https://secure.soundcloud.com`, NOT the regular
  * `api.soundcloud.com` host used by all other endpoints.
+ *
+ * @param accessToken - The OAuth access token to invalidate
+ * @throws {Error} When the sign-out request fails
+ *
+ * @example
+ * ```ts
+ * import { signOut } from 'tsd-soundcloud';
+ *
+ * await signOut('your-access-token');
+ * ```
  */
 export const signOut = async (accessToken: string): Promise<void> => {
   const res = await fetch("https://secure.soundcloud.com/sign-out", {

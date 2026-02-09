@@ -2,33 +2,57 @@ import { SoundCloudError } from "../errors.js";
 
 const BASE_URL = "https://api.soundcloud.com";
 
+/**
+ * Options for making a request to the SoundCloud API via {@link scFetch}.
+ */
 export interface RequestOptions {
+  /** API path relative to `https://api.soundcloud.com` (e.g. "/tracks/123") */
   path: string;
+  /** HTTP method */
   method: "GET" | "POST" | "PUT" | "DELETE";
+  /** OAuth access token to include in the Authorization header */
   token?: string;
+  /** Request body — automatically serialized based on type */
   body?: Record<string, unknown> | FormData | URLSearchParams;
+  /** Override the Content-Type header (defaults to "application/json" for object bodies) */
   contentType?: string;
 }
 
+/**
+ * Configuration for automatic retry with exponential backoff on transient errors.
+ */
 export interface RetryConfig {
-  /** Max retries on 429/5xx (default: 3) */
+  /** Maximum number of retries on 429/5xx responses (default: 3) */
   maxRetries: number;
-  /** Base delay in ms for exponential backoff (default: 1000) */
+  /** Base delay in milliseconds for exponential backoff (default: 1000) */
   retryBaseDelay: number;
-  /** Optional debug logger */
+  /** Optional callback for debug logging of retry attempts */
   onDebug?: (message: string) => void;
 }
 
+/**
+ * Context for automatic token refresh when a request returns 401 Unauthorized.
+ * Used internally by {@link SoundCloudClient} to transparently refresh expired tokens.
+ */
 export interface AutoRefreshContext {
+  /** Returns the current stored access token */
   getToken: () => string | undefined;
+  /** Called to obtain fresh tokens; if absent, 401 errors are thrown directly */
   onTokenRefresh?: () => Promise<{ access_token: string; refresh_token?: string }>;
+  /** Callback to store the new tokens after a successful refresh */
   setToken: (accessToken: string, refreshToken?: string) => void;
+  /** Retry configuration for this context */
   retry?: RetryConfig;
 }
 
 const DEFAULT_RETRY: RetryConfig = { maxRetries: 3, retryBaseDelay: 1000 };
 
-/** Delay helper that can be mocked/awaited */
+/**
+ * Creates a promise that resolves after the specified delay.
+ *
+ * @param ms - Delay duration in milliseconds
+ * @returns A promise that resolves after `ms` milliseconds
+ */
 export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -63,8 +87,29 @@ async function parseErrorBody(response: { json(): Promise<unknown> }): Promise<u
 }
 
 /**
- * Make a request to the SoundCloud API using native fetch.
- * Returns parsed JSON, or for 302 redirects returns the Location header.
+ * Make a request to the SoundCloud API using native `fetch`.
+ *
+ * Handles JSON serialization, OAuth headers, automatic retries on 429/5xx,
+ * and optional automatic token refresh on 401. For 302 redirects, returns
+ * the `Location` header value. For 204 responses, returns `undefined`.
+ *
+ * @param options - Request configuration (path, method, token, body)
+ * @param refreshCtx - Optional auto-refresh context for transparent token renewal
+ * @returns Parsed JSON response, redirect URL, or undefined for empty responses
+ * @throws {SoundCloudError} When the API returns a non-retryable error status
+ *
+ * @example
+ * ```ts
+ * import { scFetch } from 'tsd-soundcloud';
+ *
+ * const track = await scFetch<SoundCloudTrack>({
+ *   path: '/tracks/123456',
+ *   method: 'GET',
+ *   token: 'your-access-token',
+ * });
+ * ```
+ *
+ * @see https://developers.soundcloud.com/docs/api/explorer/open-api
  */
 export async function scFetch<T>(
   options: RequestOptions,
@@ -161,8 +206,25 @@ export async function scFetch<T>(
 }
 
 /**
- * Fetch an absolute URL (e.g. next_href from paginated responses).
- * Adds OAuth token if provided.
+ * Fetch an absolute URL (e.g. `next_href` from paginated responses).
+ *
+ * Used internally for pagination — follows the same retry logic as {@link scFetch}.
+ *
+ * @param url - Absolute URL to fetch (typically a `next_href` value)
+ * @param token - OAuth access token to include in the Authorization header
+ * @param retryConfig - Optional retry configuration override
+ * @returns Parsed JSON response
+ * @throws {SoundCloudError} When the API returns a non-retryable error status
+ *
+ * @example
+ * ```ts
+ * import { scFetchUrl } from 'tsd-soundcloud';
+ *
+ * const nextPage = await scFetchUrl<SoundCloudPaginatedResponse<SoundCloudTrack>>(
+ *   response.next_href,
+ *   'your-access-token',
+ * );
+ * ```
  */
 export async function scFetchUrl<T>(
   url: string,
