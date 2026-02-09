@@ -1,6 +1,6 @@
 {
   "name": "soundcloud-api-ts",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.0 + PKCE support.",
   "bin": {
     "soundcloud-cli": "./dist/cli.js"
