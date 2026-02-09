@@ -1,7 +1,7 @@
 {
   "name": "soundcloud-api-ts",
   "version": "1.4.3",
-  "description": "A TypeScript client for the SoundCloud API",
+  "description": "A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.0 + PKCE support.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -55,5 +55,6 @@
     "typedoc": "^0.28.16",
     "typescript": "^5.3.0",
     "vitest": "^4.0.18"
-  }
+  },
+  "homepage": "https://twin-paws.github.io/soundcloud-api-ts/"
 }

@@ -6,7 +6,8 @@
 [![license](https://img.shields.io/npm/l/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-ts/blob/main/LICENSE)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/soundcloud-api-ts)](https://bundlephobia.com/package/soundcloud-api-ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
-[![coverage](https://img.shields.io/badge/coverage-67%25-yellow.svg)]()
+[![coverage](https://img.shields.io/badge/coverage-94%25-brightgreen.svg)]()
+[![docs](https://img.shields.io/badge/docs-TypeDoc-blue.svg)](https://twin-paws.github.io/soundcloud-api-ts/)
 
 A TypeScript client for the SoundCloud API. Zero dependencies, uses native `fetch`.
 
@@ -343,6 +344,10 @@ const sc = new SoundCloudClient({
 - **4xx errors** (except 429) are NOT retried — they throw immediately
 - **401 errors** trigger `onTokenRefresh` (if configured) instead of retry
 - Backoff formula: `baseDelay × 2^attempt` with jitter
+
+## Documentation
+
+Full API documentation is available at **[twin-paws.github.io/soundcloud-api-ts](https://twin-paws.github.io/soundcloud-api-ts/)** — auto-generated from source with TypeDoc.
 
 ## Requirements
 
