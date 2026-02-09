@@ -6,7 +6,7 @@
 [![license](https://img.shields.io/npm/l/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-ts/blob/main/LICENSE)
 [![bundle size](https://img.shields.io/bundlephobia/minzip/soundcloud-api-ts)](https://bundlephobia.com/package/soundcloud-api-ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3+-blue.svg)](https://www.typescriptlang.org/)
-[![coverage](https://img.shields.io/badge/coverage-94%25-brightgreen.svg)]()
+[![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)]()
 [![docs](https://img.shields.io/badge/docs-TypeDoc-blue.svg)](https://twin-paws.github.io/soundcloud-api-ts/)
 
 A fully-typed TypeScript client for the SoundCloud API. Zero dependencies, native `fetch`, built-in OAuth 2.1 + PKCE, automatic retry, and an interactive CLI.
@@ -36,7 +36,7 @@ A fully-typed TypeScript client for the SoundCloud API. Zero dependencies, nativ
 | CLI tool | ✅ `sc-cli` | ❌ | ❌ |
 | Pagination helpers | ✅ async iterators | ❌ | ✅ |
 | Typed errors | ✅ `SoundCloudError` | ❌ | ❌ |
-| Test coverage | **94%** | — | — |
+| Test coverage | **100%** | — | — |
 | API docs site | ✅ [TypeDoc](https://twin-paws.github.io/soundcloud-api-ts/) | ✅ | ❌ |
 | LLM/AI-friendly | ✅ llms.txt + AGENTS.md | ❌ | ❌ |
 | Maintained | ✅ 2026 | ✅ 2025 | ✅ 2026 |
