@@ -5,6 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-02-09
+
+### Added
+
+- Dynamic Shields.io badges: weekly downloads, install size, GitHub stars, Node.js version
+- `engines.node >= 20` declared in package.json
+- Bundle size comparison in README (4.5 KB gzipped vs 191 KB for soundcloud-fetch)
+- Install size badge via packagephobia
+
+## [1.7.0] - 2026-02-09
+
+### Added
+
+- 13 new tests (262 total) covering http.ts edge cases and SoundCloudClient branches
+- **100% line and function coverage**
+
+### Changed
+
+- All OAuth references standardized to **OAuth 2.1** (matching SoundCloud official docs)
+- SECURITY.md now uses GitHub private vulnerability reporting (no email exposed)
+- Private vulnerability reporting enabled on repository
+- Comparison table updated with real competitors (soundcloud.ts, soundcloud-fetch)
+- Added **API Terms Compliance** section to README
+- Comparison callout explains ToS risks of undocumented api-v2 usage
+- AI content usage disclaimer added
+
+### Removed
+
+- `docs/AUTH_FLOW.md` (internal review doc, not useful to consumers)
+
+## [1.6.3] - 2026-02-09
+
+### Changed
+
+- Updated comparison table with real competitors and ToS references
+
 ## [1.6.2] - 2026-02-09
 
 ### Changed
@@ -157,6 +193,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Zero runtime dependencies — native `fetch`
 - SoundCloud widget URL utility
 
+[1.8.1]: https://github.com/twin-paws/soundcloud-api-ts/compare/v1.7.0...v1.8.1
+[1.7.0]: https://github.com/twin-paws/soundcloud-api-ts/compare/v1.6.3...v1.7.0
+[1.6.3]: https://github.com/twin-paws/soundcloud-api-ts/compare/v1.6.2...v1.6.3
 [1.6.2]: https://github.com/twin-paws/soundcloud-api-ts/compare/v1.6.0...v1.6.2
 [1.6.0]: https://github.com/twin-paws/soundcloud-api-ts/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/twin-paws/soundcloud-api-ts/compare/v1.4.3...v1.5.0
