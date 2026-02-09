@@ -236,7 +236,6 @@ export class SoundCloudClient {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace SoundCloudClient {
   /**
    * Authentication namespace — OAuth token grants and session management.

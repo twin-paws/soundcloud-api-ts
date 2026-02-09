@@ -1,5 +1,4 @@
 import type { SoundCloudPaginatedResponse } from "../types/api.js";
-import { scFetchUrl } from "./http.js";
 
 /**
  * Async generator that automatically follows `next_href` pagination,

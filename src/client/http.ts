@@ -1,4 +1,4 @@
-import { SoundCloudError } from "../errors.js";
+import { SoundCloudError, type SoundCloudErrorBody } from "../errors.js";
 
 const BASE_URL = "https://api.soundcloud.com";
 
@@ -169,7 +169,7 @@ export async function scFetch<T>(
       // Don't retry 401 (handled by token refresh) or non-retryable 4xx
       if (!isRetryable(response.status)) {
         const body = await parseErrorBody(response);
-        throw new SoundCloudError(response.status, response.statusText, body as any);
+        throw new SoundCloudError(response.status, response.statusText, body as SoundCloudErrorBody);
       }
 
       lastResponse = response;
@@ -185,7 +185,7 @@ export async function scFetch<T>(
 
     // All retries exhausted
     const body = await parseErrorBody(lastResponse!);
-    throw new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as any);
+    throw new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as SoundCloudErrorBody);
   };
 
   try {
@@ -255,7 +255,7 @@ export async function scFetchUrl<T>(
 
     if (!isRetryable(response.status)) {
       const body = await parseErrorBody(response);
-      throw new SoundCloudError(response.status, response.statusText, body as any);
+      throw new SoundCloudError(response.status, response.statusText, body as SoundCloudErrorBody);
     }
 
     lastResponse = response;
@@ -270,5 +270,5 @@ export async function scFetchUrl<T>(
   }
 
   const body = await parseErrorBody(lastResponse!);
-  throw new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as any);
+  throw new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as SoundCloudErrorBody);
 }
