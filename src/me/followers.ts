@@ -11,7 +11,7 @@ import type { SoundCloudUser, SoundCloudPaginatedResponse } from "../types/api.j
  *
  * @example
  * ```ts
- * import { getMeFollowers } from 'tsd-soundcloud';
+ * import { getMeFollowers } from 'soundcloud-api-ts';
  *
  * const result = await getMeFollowers(token, 50);
  * result.collection.forEach(u => console.log(u.username));

@@ -9,7 +9,7 @@ import { scFetch } from "../client/http.js";
  *
  * @example
  * ```ts
- * import { repostTrack } from 'tsd-soundcloud';
+ * import { repostTrack } from 'soundcloud-api-ts';
  *
  * const success = await repostTrack(token, 123456);
  * ```
@@ -27,6 +27,13 @@ export const repostTrack = async (token: string, trackId: string | number): Prom
  * @param trackId - The track's numeric ID or URN
  * @returns `true` if the unrepost was successful, `false` on failure
  *
+ * @example
+ * ```ts
+ * import { unrepostTrack } from 'soundcloud-api-ts';
+ *
+ * const success = await unrepostTrack(token, 123456);
+ * ```
+ *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/reposts/delete_reposts_tracks__track_id_
  */
 export const unrepostTrack = async (token: string, trackId: string | number): Promise<boolean> => {
@@ -40,6 +47,13 @@ export const unrepostTrack = async (token: string, trackId: string | number): Pr
  * @param playlistId - The playlist's numeric ID or URN
  * @returns `true` if the repost was successful, `false` on failure
  *
+ * @example
+ * ```ts
+ * import { repostPlaylist } from 'soundcloud-api-ts';
+ *
+ * const success = await repostPlaylist(token, 789012);
+ * ```
+ *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/reposts/post_reposts_playlists__playlist_id_
  */
 export const repostPlaylist = async (token: string, playlistId: string | number): Promise<boolean> => {
@@ -52,6 +66,13 @@ export const repostPlaylist = async (token: string, playlistId: string | number)
  * @param token - OAuth access token
  * @param playlistId - The playlist's numeric ID or URN
  * @returns `true` if the unrepost was successful, `false` on failure
+ *
+ * @example
+ * ```ts
+ * import { unrepostPlaylist } from 'soundcloud-api-ts';
+ *
+ * const success = await unrepostPlaylist(token, 789012);
+ * ```
  *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/reposts/delete_reposts_playlists__playlist_id_
  */

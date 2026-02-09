@@ -12,7 +12,7 @@ import type { SoundCloudPlaylist, SoundCloudPaginatedResponse } from "../types/a
  *
  * @example
  * ```ts
- * import { getUserPlaylists } from 'tsd-soundcloud';
+ * import { getUserPlaylists } from 'soundcloud-api-ts';
  *
  * const result = await getUserPlaylists(token, 123456, 10);
  * result.collection.forEach(p => console.log(p.title));

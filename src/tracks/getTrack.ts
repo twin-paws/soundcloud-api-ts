@@ -11,7 +11,7 @@ import type { SoundCloudTrack } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getTrack } from 'tsd-soundcloud';
+ * import { getTrack } from 'soundcloud-api-ts';
  *
  * const track = await getTrack(token, 123456);
  * console.log(track.title, track.duration);

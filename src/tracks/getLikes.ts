@@ -12,7 +12,7 @@ import type { SoundCloudUser, SoundCloudPaginatedResponse } from "../types/api.j
  *
  * @example
  * ```ts
- * import { getTrackLikes } from 'tsd-soundcloud';
+ * import { getTrackLikes } from 'soundcloud-api-ts';
  *
  * const result = await getTrackLikes(token, 123456, 50);
  * result.collection.forEach(u => console.log(u.username));

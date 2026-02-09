@@ -12,7 +12,7 @@
  *
  * @example
  * ```ts
- * import { getAuthorizationUrl, generateCodeVerifier, generateCodeChallenge } from 'tsd-soundcloud';
+ * import { getAuthorizationUrl, generateCodeVerifier, generateCodeChallenge } from 'soundcloud-api-ts';
  *
  * const verifier = generateCodeVerifier();
  * const challenge = await generateCodeChallenge(verifier);

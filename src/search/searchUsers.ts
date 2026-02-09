@@ -12,7 +12,7 @@ import type { SoundCloudUser, SoundCloudPaginatedResponse } from "../types/api.j
  *
  * @example
  * ```ts
- * import { searchUsers } from 'tsd-soundcloud';
+ * import { searchUsers } from 'soundcloud-api-ts';
  *
  * const result = await searchUsers(token, 'deadmau5');
  * result.collection.forEach(u => console.log(u.username));

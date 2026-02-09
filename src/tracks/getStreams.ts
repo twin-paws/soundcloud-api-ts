@@ -11,7 +11,7 @@ import type { SoundCloudStreams } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getTrackStreams } from 'tsd-soundcloud';
+ * import { getTrackStreams } from 'soundcloud-api-ts';
  *
  * const streams = await getTrackStreams(token, 123456);
  * console.log(streams.hls_mp3_128_url);

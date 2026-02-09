@@ -13,7 +13,7 @@ import type { SoundCloudToken } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getClientToken } from 'tsd-soundcloud';
+ * import { getClientToken } from 'soundcloud-api-ts';
  *
  * const token = await getClientToken('YOUR_CLIENT_ID', 'YOUR_CLIENT_SECRET');
  * console.log(token.access_token);

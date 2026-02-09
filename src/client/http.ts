@@ -100,7 +100,7 @@ async function parseErrorBody(response: { json(): Promise<unknown> }): Promise<u
  *
  * @example
  * ```ts
- * import { scFetch } from 'tsd-soundcloud';
+ * import { scFetch } from 'soundcloud-api-ts';
  *
  * const track = await scFetch<SoundCloudTrack>({
  *   path: '/tracks/123456',
@@ -218,7 +218,7 @@ export async function scFetch<T>(
  *
  * @example
  * ```ts
- * import { scFetchUrl } from 'tsd-soundcloud';
+ * import { scFetchUrl } from 'soundcloud-api-ts';
  *
  * const nextPage = await scFetchUrl<SoundCloudPaginatedResponse<SoundCloudTrack>>(
  *   response.next_href,

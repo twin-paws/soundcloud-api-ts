@@ -11,7 +11,7 @@ import type { SoundCloudPlaylist, SoundCloudPaginatedResponse } from "../types/a
  *
  * @example
  * ```ts
- * import { getMePlaylists } from 'tsd-soundcloud';
+ * import { getMePlaylists } from 'soundcloud-api-ts';
  *
  * const result = await getMePlaylists(token, 10);
  * result.collection.forEach(p => console.log(p.title));

@@ -11,7 +11,7 @@ import type { SoundCloudPlaylist } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getPlaylist } from 'tsd-soundcloud';
+ * import { getPlaylist } from 'soundcloud-api-ts';
  *
  * const playlist = await getPlaylist(token, 123456);
  * console.log(playlist.title, playlist.track_count);

@@ -11,7 +11,7 @@ import type { SoundCloudWebProfile } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getUserWebProfiles } from 'tsd-soundcloud';
+ * import { getUserWebProfiles } from 'soundcloud-api-ts';
  *
  * const profiles = await getUserWebProfiles(token, 123456);
  * profiles.forEach(p => console.log(p.service, p.url));

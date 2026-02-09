@@ -47,7 +47,7 @@ export interface CreatePlaylistParams {
  *
  * @example
  * ```ts
- * import { createPlaylist } from 'tsd-soundcloud';
+ * import { createPlaylist } from 'soundcloud-api-ts';
  *
  * const playlist = await createPlaylist(token, {
  *   title: 'My Favorites',

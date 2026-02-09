@@ -11,7 +11,7 @@ import type { SoundCloudTrack, SoundCloudPlaylist, SoundCloudPaginatedResponse }
  *
  * @example
  * ```ts
- * import { getMeLikesTracks } from 'tsd-soundcloud';
+ * import { getMeLikesTracks } from 'soundcloud-api-ts';
  *
  * const result = await getMeLikesTracks(token, 50);
  * result.collection.forEach(t => console.log(t.title));
@@ -29,6 +29,14 @@ export const getMeLikesTracks = (token: string, limit?: number): Promise<SoundCl
  * @param limit - Maximum number of playlists per page
  * @returns Paginated list of liked playlists
  * @throws {SoundCloudError} When the API returns an error
+ *
+ * @example
+ * ```ts
+ * import { getMeLikesPlaylists } from 'soundcloud-api-ts';
+ *
+ * const result = await getMeLikesPlaylists(token, 50);
+ * result.collection.forEach(p => console.log(p.title));
+ * ```
  *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/me/get_me_likes_playlists
  */

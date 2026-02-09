@@ -9,7 +9,7 @@ import { scFetch } from "../client/http.js";
  *
  * @example
  * ```ts
- * import { deleteTrack } from 'tsd-soundcloud';
+ * import { deleteTrack } from 'soundcloud-api-ts';
  *
  * await deleteTrack(token, 123456);
  * ```

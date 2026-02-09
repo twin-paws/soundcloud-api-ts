@@ -16,7 +16,7 @@ import type { SoundCloudToken } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getUserToken } from 'tsd-soundcloud';
+ * import { getUserToken } from 'soundcloud-api-ts';
  *
  * const token = await getUserToken(
  *   'YOUR_CLIENT_ID',

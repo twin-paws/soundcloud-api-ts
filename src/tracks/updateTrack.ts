@@ -52,7 +52,7 @@ export interface UpdateTrackParams {
  *
  * @example
  * ```ts
- * import { updateTrack } from 'tsd-soundcloud';
+ * import { updateTrack } from 'soundcloud-api-ts';
  *
  * const updated = await updateTrack(token, 123456, {
  *   title: 'New Title',

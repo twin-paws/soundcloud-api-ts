@@ -9,7 +9,7 @@ import { scFetch } from "../client/http.js";
  *
  * @example
  * ```ts
- * import { likeTrack } from 'tsd-soundcloud';
+ * import { likeTrack } from 'soundcloud-api-ts';
  *
  * const success = await likeTrack(token, 123456);
  * ```

@@ -13,7 +13,7 @@ import type { SoundCloudComment } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { createTrackComment } from 'tsd-soundcloud';
+ * import { createTrackComment } from 'soundcloud-api-ts';
  *
  * const comment = await createTrackComment(token, 123456, 'Great drop!', 60000);
  * console.log(comment.id);

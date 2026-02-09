@@ -11,7 +11,7 @@ import type { SoundCloudUser } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getUser } from 'tsd-soundcloud';
+ * import { getUser } from 'soundcloud-api-ts';
  *
  * const user = await getUser(token, 123456);
  * console.log(user.username);

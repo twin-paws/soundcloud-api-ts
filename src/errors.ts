@@ -46,7 +46,7 @@ export interface SoundCloudErrorBody {
  *
  * @example
  * ```ts
- * import { SoundCloudError } from 'tsd-soundcloud';
+ * import { SoundCloudError } from 'soundcloud-api-ts';
  *
  * try {
  *   await sc.tracks.getTrack(999999999);

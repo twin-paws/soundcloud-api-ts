@@ -10,7 +10,7 @@ import type { SoundCloudMe } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getMe } from 'tsd-soundcloud';
+ * import { getMe } from 'soundcloud-api-ts';
  *
  * const me = await getMe(token);
  * console.log(me.username, me.private_tracks_count);

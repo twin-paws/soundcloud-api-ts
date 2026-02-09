@@ -9,6 +9,14 @@ import type { SoundCloudUser, SoundCloudTrack, SoundCloudPaginatedResponse } fro
  * @returns Paginated list of followed users
  * @throws {SoundCloudError} When the API returns an error
  *
+ * @example
+ * ```ts
+ * import { getMeFollowings } from 'soundcloud-api-ts';
+ *
+ * const result = await getMeFollowings(token, 50);
+ * result.collection.forEach(u => console.log(u.username));
+ * ```
+ *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/me/get_me_followings
  */
 export const getMeFollowings = (token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>> =>
@@ -21,6 +29,14 @@ export const getMeFollowings = (token: string, limit?: number): Promise<SoundClo
  * @param limit - Maximum number of tracks per page
  * @returns Paginated list of tracks from followed users
  * @throws {SoundCloudError} When the API returns an error
+ *
+ * @example
+ * ```ts
+ * import { getMeFollowingsTracks } from 'soundcloud-api-ts';
+ *
+ * const result = await getMeFollowingsTracks(token, 50);
+ * result.collection.forEach(t => console.log(t.title));
+ * ```
  *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/me/get_me_followings_tracks
  */
@@ -36,7 +52,7 @@ export const getMeFollowingsTracks = (token: string, limit?: number): Promise<So
  *
  * @example
  * ```ts
- * import { followUser } from 'tsd-soundcloud';
+ * import { followUser } from 'soundcloud-api-ts';
  *
  * await followUser(token, 123456);
  * ```
@@ -55,7 +71,7 @@ export const followUser = (token: string, userUrn: string | number): Promise<voi
  *
  * @example
  * ```ts
- * import { unfollowUser } from 'tsd-soundcloud';
+ * import { unfollowUser } from 'soundcloud-api-ts';
  *
  * await unfollowUser(token, 123456);
  * ```

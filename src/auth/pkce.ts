@@ -7,7 +7,7 @@
  *
  * @example
  * ```ts
- * import { generateCodeVerifier, generateCodeChallenge } from 'tsd-soundcloud';
+ * import { generateCodeVerifier, generateCodeChallenge } from 'soundcloud-api-ts';
  *
  * const verifier = generateCodeVerifier();
  * const challenge = await generateCodeChallenge(verifier);
@@ -33,7 +33,7 @@ export function generateCodeVerifier(): string {
  *
  * @example
  * ```ts
- * import { generateCodeVerifier, generateCodeChallenge } from 'tsd-soundcloud';
+ * import { generateCodeVerifier, generateCodeChallenge } from 'soundcloud-api-ts';
  *
  * const verifier = generateCodeVerifier();
  * const challenge = await generateCodeChallenge(verifier);

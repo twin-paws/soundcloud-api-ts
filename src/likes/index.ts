@@ -9,7 +9,7 @@ import { scFetch } from "../client/http.js";
  *
  * @example
  * ```ts
- * import { likeTrack } from 'tsd-soundcloud';
+ * import { likeTrack } from 'soundcloud-api-ts';
  *
  * const success = await likeTrack(token, 123456);
  * ```
@@ -27,6 +27,13 @@ export const likeTrack = async (token: string, trackId: string | number): Promis
  * @param trackId - The track's numeric ID or URN
  * @returns `true` if the unlike was successful, `false` on failure
  *
+ * @example
+ * ```ts
+ * import { unlikeTrack } from 'soundcloud-api-ts';
+ *
+ * const success = await unlikeTrack(token, 123456);
+ * ```
+ *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/likes/delete_likes_tracks__track_id_
  */
 export const unlikeTrack = async (token: string, trackId: string | number): Promise<boolean> => {
@@ -40,6 +47,13 @@ export const unlikeTrack = async (token: string, trackId: string | number): Prom
  * @param playlistId - The playlist's numeric ID or URN
  * @returns `true` if the like was successful, `false` on failure
  *
+ * @example
+ * ```ts
+ * import { likePlaylist } from 'soundcloud-api-ts';
+ *
+ * const success = await likePlaylist(token, 789012);
+ * ```
+ *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/likes/post_likes_playlists__playlist_id_
  */
 export const likePlaylist = async (token: string, playlistId: string | number): Promise<boolean> => {
@@ -52,6 +66,13 @@ export const likePlaylist = async (token: string, playlistId: string | number): 
  * @param token - OAuth access token
  * @param playlistId - The playlist's numeric ID or URN
  * @returns `true` if the unlike was successful, `false` on failure
+ *
+ * @example
+ * ```ts
+ * import { unlikePlaylist } from 'soundcloud-api-ts';
+ *
+ * const success = await unlikePlaylist(token, 789012);
+ * ```
  *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/likes/delete_likes_playlists__playlist_id_
  */

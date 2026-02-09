@@ -9,7 +9,7 @@
  *
  * @example
  * ```ts
- * import { signOut } from 'tsd-soundcloud';
+ * import { signOut } from 'soundcloud-api-ts';
  *
  * await signOut('your-access-token');
  * ```

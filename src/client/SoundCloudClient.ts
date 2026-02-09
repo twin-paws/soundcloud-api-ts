@@ -65,7 +65,7 @@ function resolveToken(tokenGetter: TokenGetter, explicit?: string): string {
  *
  * @example
  * ```ts
- * import { SoundCloudClient } from 'tsd-soundcloud';
+ * import { SoundCloudClient } from 'soundcloud-api-ts';
  *
  * const sc = new SoundCloudClient({
  *   clientId: 'YOUR_CLIENT_ID',

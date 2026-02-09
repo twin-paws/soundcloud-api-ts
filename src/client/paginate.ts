@@ -10,7 +10,7 @@ import type { SoundCloudPaginatedResponse } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { paginate, searchTracks, scFetchUrl } from 'tsd-soundcloud';
+ * import { paginate, searchTracks, scFetchUrl } from 'soundcloud-api-ts';
  *
  * const pages = paginate(
  *   () => searchTracks(token, 'lofi'),
@@ -47,7 +47,7 @@ export async function* paginate<T>(
  *
  * @example
  * ```ts
- * import { paginateItems, searchTracks, scFetchUrl } from 'tsd-soundcloud';
+ * import { paginateItems, searchTracks, scFetchUrl } from 'soundcloud-api-ts';
  *
  * const tracks = paginateItems(
  *   () => searchTracks(token, 'lofi'),
@@ -83,7 +83,7 @@ export async function* paginateItems<T>(
  *
  * @example
  * ```ts
- * import { fetchAll, searchTracks, scFetchUrl } from 'tsd-soundcloud';
+ * import { fetchAll, searchTracks, scFetchUrl } from 'soundcloud-api-ts';
  *
  * const allTracks = await fetchAll(
  *   () => searchTracks(token, 'lofi'),

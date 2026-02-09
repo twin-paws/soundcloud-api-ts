@@ -12,7 +12,7 @@ import { scFetch } from "../client/http.js";
  *
  * @example
  * ```ts
- * import { resolveUrl } from 'tsd-soundcloud';
+ * import { resolveUrl } from 'soundcloud-api-ts';
  *
  * const apiUrl = await resolveUrl(token, 'https://soundcloud.com/deadmau5/strobe');
  * console.log(apiUrl); // "https://api.soundcloud.com/tracks/..."

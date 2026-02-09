@@ -11,7 +11,7 @@ import type { SoundCloudActivitiesResponse } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getMeActivities } from 'tsd-soundcloud';
+ * import { getMeActivities } from 'soundcloud-api-ts';
  *
  * const activities = await getMeActivities(token, 25);
  * activities.collection.forEach(a => console.log(a.type));
@@ -30,6 +30,14 @@ export const getMeActivities = (token: string, limit?: number): Promise<SoundClo
  * @returns Activities response
  * @throws {SoundCloudError} When the API returns an error
  *
+ * @example
+ * ```ts
+ * import { getMeActivitiesOwn } from 'soundcloud-api-ts';
+ *
+ * const activities = await getMeActivitiesOwn(token, 25);
+ * activities.collection.forEach(a => console.log(a.type));
+ * ```
+ *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/me/get_me_activities_all_own
  */
 export const getMeActivitiesOwn = (token: string, limit?: number): Promise<SoundCloudActivitiesResponse> =>
@@ -42,6 +50,14 @@ export const getMeActivitiesOwn = (token: string, limit?: number): Promise<Sound
  * @param limit - Maximum number of activities per page
  * @returns Activities response filtered to track activities
  * @throws {SoundCloudError} When the API returns an error
+ *
+ * @example
+ * ```ts
+ * import { getMeActivitiesTracks } from 'soundcloud-api-ts';
+ *
+ * const activities = await getMeActivitiesTracks(token, 25);
+ * activities.collection.forEach(a => console.log(a.type));
+ * ```
  *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/me/get_me_activities_tracks
  */

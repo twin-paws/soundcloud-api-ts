@@ -12,7 +12,7 @@ import type { SoundCloudComment, SoundCloudPaginatedResponse } from "../types/ap
  *
  * @example
  * ```ts
- * import { getTrackComments } from 'tsd-soundcloud';
+ * import { getTrackComments } from 'soundcloud-api-ts';
  *
  * const result = await getTrackComments(token, 123456, 20);
  * result.collection.forEach(c => console.log(c.body));

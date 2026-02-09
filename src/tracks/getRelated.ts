@@ -12,7 +12,7 @@ import type { SoundCloudTrack } from "../types/api.js";
  *
  * @example
  * ```ts
- * import { getRelatedTracks } from 'tsd-soundcloud';
+ * import { getRelatedTracks } from 'soundcloud-api-ts';
  *
  * const related = await getRelatedTracks(token, 123456, 5);
  * related.forEach(t => console.log(t.title));

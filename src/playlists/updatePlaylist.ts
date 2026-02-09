@@ -48,7 +48,7 @@ export interface UpdatePlaylistParams {
  *
  * @example
  * ```ts
- * import { updatePlaylist } from 'tsd-soundcloud';
+ * import { updatePlaylist } from 'soundcloud-api-ts';
  *
  * const updated = await updatePlaylist(token, 123456, {
  *   title: 'Updated Title',
