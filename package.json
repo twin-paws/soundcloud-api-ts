@@ -1,6 +1,6 @@
 {
   "name": "soundcloud-api-ts",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "A TypeScript client for the SoundCloud API",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
