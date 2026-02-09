@@ -39,6 +39,13 @@ describe("getTrackComments", () => {
     expect(r.collection[0].body).toBe("nice");
     expect(fn.mock.calls[0][0]).toContain("/tracks/1/comments");
   });
+
+  it("works without limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getTrackComments("tok", 1);
+    expect(fn.mock.calls[0][0]).toContain("linked_partitioning=true");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
 });
 
 describe("createTrackComment", () => {
@@ -57,18 +64,32 @@ describe("createTrackComment", () => {
 });
 
 describe("getTrackLikes", () => {
-  it("fetches likers", async () => {
+  it("fetches likers without limit", async () => {
     const fn = mockFetch({ json: { collection: [], next_href: null } });
     await getTrackLikes("tok", 1);
     expect(fn.mock.calls[0][0]).toContain("/tracks/1/favoriters");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
+
+  it("works with limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getTrackLikes("tok", 1, 25);
+    expect(fn.mock.calls[0][0]).toContain("limit=25");
   });
 });
 
 describe("getTrackReposts", () => {
-  it("fetches reposters", async () => {
+  it("fetches reposters without limit", async () => {
     const fn = mockFetch({ json: { collection: [], next_href: null } });
     await getTrackReposts("tok", 1);
     expect(fn.mock.calls[0][0]).toContain("/tracks/1/reposters");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
+
+  it("works with limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getTrackReposts("tok", 1, 15);
+    expect(fn.mock.calls[0][0]).toContain("limit=15");
   });
 });
 
@@ -78,6 +99,13 @@ describe("getRelatedTracks", () => {
     const r = await getRelatedTracks("tok", 1, 5);
     expect(r[0].title).toBe("Related");
     expect(fn.mock.calls[0][0]).toContain("/tracks/1/related");
+  });
+
+  it("works without limit", async () => {
+    const fn = mockFetch({ json: [] });
+    await getRelatedTracks("tok", 1);
+    expect(fn.mock.calls[0][0]).toContain("/tracks/1/related");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
   });
 });
 

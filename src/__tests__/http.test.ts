@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { scFetch } from "../client/http.js";
+import { scFetch, scFetchUrl } from "../client/http.js";
 import { SoundCloudError } from "../errors.js";
-import { mockFetch } from "./helpers.js";
+import { mockFetch, mockFetchSequence } from "./helpers.js";
 
 beforeEach(() => { vi.restoreAllMocks(); });
 
@@ -66,5 +66,40 @@ describe("scFetch", () => {
         { getToken: () => "tok", setToken: () => {}, retry: { maxRetries: 0, retryBaseDelay: 0 } },
       ),
     ).rejects.toThrow(SoundCloudError);
+  });
+});
+
+describe("scFetchUrl", () => {
+  it("fetches JSON from a URL", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    const result = await scFetchUrl("https://api.soundcloud.com/me/tracks?linked_partitioning=true", "tok");
+    expect(result).toEqual({ collection: [], next_href: null });
+    expect(fn.mock.calls[0][0]).toBe("https://api.soundcloud.com/me/tracks?linked_partitioning=true");
+  });
+
+  it("throws SoundCloudError after retries exhausted on 429", async () => {
+    mockFetchSequence([
+      { status: 429, statusText: "Too Many Requests", ok: false, json: { error: "rate limit" } },
+      { status: 429, statusText: "Too Many Requests", ok: false, json: { error: "rate limit" } },
+    ]);
+    await expect(
+      scFetchUrl("https://api.soundcloud.com/test", "tok", { maxRetries: 1, retryBaseDelay: 1 }),
+    ).rejects.toThrow(SoundCloudError);
+  });
+
+  it("throws SoundCloudError after retries exhausted on 500", async () => {
+    mockFetchSequence([
+      { status: 500, statusText: "Internal Server Error", ok: false, json: { error: "server error" } },
+      { status: 500, statusText: "Internal Server Error", ok: false, json: { error: "server error" } },
+    ]);
+    await expect(
+      scFetchUrl("https://api.soundcloud.com/test", "tok", { maxRetries: 1, retryBaseDelay: 1 }),
+    ).rejects.toThrow(SoundCloudError);
+  });
+
+  it("works without token", async () => {
+    const fn = mockFetch({ json: { id: 1 } });
+    await scFetchUrl("https://api.soundcloud.com/test");
+    expect(fn.mock.calls[0][1].headers.Authorization).toBeUndefined();
   });
 });

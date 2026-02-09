@@ -28,13 +28,44 @@ describe("searchUsers", () => {
     expect(r.collection[0].username).toBe("dj");
     expect(fn.mock.calls[0][0]).toContain("q=dj");
   });
+
+  it("works with pageNumber", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await searchUsers("tok", "dj", 2);
+    expect(fn.mock.calls[0][0]).toContain("offset=20");
+  });
+
+  it("does not add offset for pageNumber=0", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await searchUsers("tok", "dj", 0);
+    expect(fn.mock.calls[0][0]).not.toContain("offset=");
+  });
+
+  it("does not add offset for undefined pageNumber", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await searchUsers("tok", "dj");
+    expect(fn.mock.calls[0][0]).not.toContain("offset=");
+  });
 });
 
 describe("searchPlaylists", () => {
-  it("searches playlists", async () => {
+  it("searches playlists without pageNumber", async () => {
     const fn = mockFetch({ json: { collection: [{ id: 1, title: "Mix" }], next_href: null } });
     const r = await searchPlaylists("tok", "chill");
     expect(r.collection[0].title).toBe("Mix");
     expect(fn.mock.calls[0][0]).toContain("q=chill");
+    expect(fn.mock.calls[0][0]).not.toContain("offset=");
+  });
+
+  it("works with pageNumber", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await searchPlaylists("tok", "chill", 3);
+    expect(fn.mock.calls[0][0]).toContain("offset=30");
+  });
+
+  it("does not add offset for pageNumber=0", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await searchPlaylists("tok", "chill", 0);
+    expect(fn.mock.calls[0][0]).not.toContain("offset=");
   });
 });

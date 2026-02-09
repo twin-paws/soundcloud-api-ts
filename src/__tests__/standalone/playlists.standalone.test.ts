@@ -25,13 +25,28 @@ describe("getPlaylistTracks", () => {
     expect(fn.mock.calls[0][0]).toContain("/playlists/1/tracks");
     expect(fn.mock.calls[0][0]).toContain("offset=5");
   });
+
+  it("works without limit and offset", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getPlaylistTracks("tok", 1);
+    expect(fn.mock.calls[0][0]).toContain("linked_partitioning=true");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+    expect(fn.mock.calls[0][0]).not.toContain("offset=");
+  });
 });
 
 describe("getPlaylistReposts", () => {
-  it("fetches reposters", async () => {
+  it("fetches reposters without limit", async () => {
     const fn = mockFetch({ json: { collection: [], next_href: null } });
     await getPlaylistReposts("tok", 1);
     expect(fn.mock.calls[0][0]).toContain("/playlists/1/reposters");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
+
+  it("works with limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getPlaylistReposts("tok", 1, 20);
+    expect(fn.mock.calls[0][0]).toContain("limit=20");
   });
 });
 
