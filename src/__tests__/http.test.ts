@@ -169,8 +169,8 @@ describe("parseErrorBody catch branch", () => {
       { getToken: () => "tok", setToken: () => {}, retry: { maxRetries: 0, retryBaseDelay: 0 } },
     ).catch((e: SoundCloudError) => e);
     expect(err).toBeInstanceOf(SoundCloudError);
-    expect(err.status).toBe(403);
-    expect(err.body).toBeUndefined();
+    expect((err as SoundCloudError).status).toBe(403);
+    expect((err as SoundCloudError).body).toBeUndefined();
   });
 });
 
