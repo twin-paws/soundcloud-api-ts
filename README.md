@@ -41,7 +41,9 @@ A fully-typed TypeScript client for the SoundCloud API. Zero dependencies, nativ
 | LLM/AI-friendly | ✅ llms.txt + AGENTS.md | ❌ | ❌ |
 | Maintained | ✅ 2026 | ✅ 2025 | ✅ 2026 |
 
-> **Why does auth method matter?** `soundcloud.ts` and `soundcloud-fetch` require you to open browser dev tools, inspect network traffic, and manually copy your client ID — which can break anytime SoundCloud changes their frontend. `soundcloud-api-ts` uses the **official OAuth 2.0 API** with registered app credentials, PKCE for public clients, and automatic token refresh.
+> **Why does auth method matter?** `soundcloud.ts` and `soundcloud-fetch` use SoundCloud's undocumented internal `api-v2` and require you to scrape your client ID from browser dev tools. This can break anytime SoundCloud changes their frontend, and may violate the [API Terms of Use](https://developers.soundcloud.com/docs/api/terms-of-use) which state *"you must register your app"* and *"any attempt to circumvent this and obtain a new client ID and Security Code is strictly prohibited."*
+>
+> `soundcloud-api-ts` uses the **official documented API** (`api.soundcloud.com`) with registered app credentials, OAuth 2.1 as specified by SoundCloud, PKCE for public clients, and automatic token refresh.
 
 ## Install
 
@@ -400,6 +402,18 @@ const sc = new SoundCloudClient({
 - **4xx errors** (except 429) are NOT retried — they throw immediately
 - **401 errors** trigger `onTokenRefresh` (if configured) instead of retry
 - Backoff formula: `baseDelay × 2^attempt` with jitter
+
+## API Terms Compliance
+
+This package is built on SoundCloud's **official documented API** (`api.soundcloud.com`) and follows the [API Terms of Use](https://developers.soundcloud.com/docs/api/terms-of-use):
+
+- ✅ Uses registered app credentials (client ID + client secret) via OAuth 2.1
+- ✅ No undocumented or internal API endpoints (`api-v2`)
+- ✅ No client ID scraping or credential circumvention
+- ✅ No content downloading, ripping, or stream capture
+- ✅ No content aggregation into alternative streaming services
+
+> **Important:** SoundCloud's API Terms prohibit using User Content (audio, tracks, metadata) to train or develop AI/ML models. The "LLM-friendly" features of this package (`llms.txt`, `AGENTS.md`) are for helping AI coding agents **use the package itself** — not for feeding SoundCloud content to AI systems. Please review the [full terms](https://developers.soundcloud.com/docs/api/terms-of-use) before building your application.
 
 ## AI / LLM Integration
 
