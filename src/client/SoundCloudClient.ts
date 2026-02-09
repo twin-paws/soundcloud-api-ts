@@ -1,4 +1,5 @@
-import { scFetch, type AutoRefreshContext } from "./http.js";
+import { scFetch, scFetchUrl, type AutoRefreshContext } from "./http.js";
+import { paginate, paginateItems, fetchAll } from "./paginate.js";
 import type {
   SoundCloudToken,
   SoundCloudUser,
@@ -97,6 +98,46 @@ export class SoundCloudClient {
   /** Get the currently stored refresh token, if any. */
   get refreshToken(): string | undefined {
     return this._refreshToken;
+  }
+
+  /**
+   * Async generator that follows `next_href` automatically, yielding each page's `collection`.
+   *
+   * ```ts
+   * for await (const page of sc.paginate(() => sc.search.tracks("lofi"))) {
+   *   console.log(page); // SoundCloudTrack[]
+   * }
+   * ```
+   */
+  paginate<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>): AsyncGenerator<T[], void, undefined> {
+    const token = this._accessToken;
+    return paginate(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token));
+  }
+
+  /**
+   * Async generator that yields individual items across all pages.
+   *
+   * ```ts
+   * for await (const track of sc.paginateItems(() => sc.search.tracks("lofi"))) {
+   *   console.log(track); // single SoundCloudTrack
+   * }
+   * ```
+   */
+  paginateItems<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>): AsyncGenerator<T, void, undefined> {
+    const token = this._accessToken;
+    return paginateItems(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token));
+  }
+
+  /**
+   * Collects all pages into a single flat array.
+   *
+   * ```ts
+   * const allTracks = await sc.fetchAll(() => sc.search.tracks("lofi"), { maxItems: 100 });
+   * ```
+   */
+  fetchAll<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>, options?: { maxItems?: number }): Promise<T[]> {
+    const token = this._accessToken;
+    return fetchAll(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token), options);
   }
 }
 

@@ -93,3 +93,29 @@ export async function scFetch<T>(
     throw err;
   }
 }
+
+/**
+ * Fetch an absolute URL (e.g. next_href from paginated responses).
+ * Adds OAuth token if provided.
+ */
+export async function scFetchUrl<T>(url: string, token?: string): Promise<T> {
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers["Authorization"] = `OAuth ${token}`;
+
+  const response = await fetch(url, { method: "GET", headers, redirect: "manual" });
+
+  if (response.status === 302) {
+    const location = response.headers.get("location");
+    if (location) return location as T;
+  }
+
+  if (response.status === 204 || response.headers.get("content-length") === "0") {
+    return undefined as T;
+  }
+
+  if (!response.ok) {
+    throw new Error(`SoundCloud API error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json() as Promise<T>;
+}

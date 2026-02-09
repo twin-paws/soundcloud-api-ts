@@ -258,6 +258,32 @@ interface SoundCloudPaginatedResponse<T> {
 }
 ```
 
+### Automatic Pagination
+
+The client provides three helpers that automatically follow `next_href` across pages:
+
+```ts
+// Stream pages — yields T[] for each page
+for await (const page of sc.paginate(() => sc.users.getTracks(userId))) {
+  console.log(`Got ${page.length} tracks`);
+}
+
+// Stream individual items — yields one T at a time
+for await (const track of sc.paginateItems(() => sc.search.tracks("lofi"))) {
+  console.log(track.title);
+}
+
+// Collect all into a flat array (with optional limit)
+const allTracks = await sc.fetchAll(() => sc.users.getTracks(userId));
+const first100 = await sc.fetchAll(() => sc.search.tracks("lofi"), { maxItems: 100 });
+```
+
+The standalone functions are also exported for advanced use:
+
+```ts
+import { paginate, paginateItems, fetchAll, scFetchUrl } from "soundcloud-api-ts";
+```
+
 ## Utilities
 
 ```ts

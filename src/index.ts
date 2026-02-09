@@ -1,8 +1,9 @@
 // Client
 export { SoundCloudClient } from "./client/SoundCloudClient.js";
 export type { SoundCloudClientConfig, TokenOption } from "./client/SoundCloudClient.js";
-export { scFetch } from "./client/http.js";
+export { scFetch, scFetchUrl } from "./client/http.js";
 export type { RequestOptions } from "./client/http.js";
+export { paginate, paginateItems, fetchAll } from "./client/paginate.js";
 
 // Types
 export type {
