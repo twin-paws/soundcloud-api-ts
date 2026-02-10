@@ -12,12 +12,20 @@
 [![docs](https://img.shields.io/badge/docs-TypeDoc-blue.svg)](https://twin-paws.github.io/soundcloud-api-ts/)
 [![GitHub stars](https://img.shields.io/github/stars/twin-paws/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-ts)
 
-A fully-typed TypeScript client for the SoundCloud API. Zero dependencies, native `fetch`, built-in OAuth 2.1 + PKCE, automatic retry, and an interactive CLI.
+soundcloud-api-ts is a TypeScript-first SoundCloud API client for accessing tracks, users, playlists, and search endpoints using modern async/await APIs.
 
-## Why soundcloud-api-ts?
+Zero dependencies, native `fetch`, built-in OAuth 2.1 + PKCE, automatic retry, and an interactive CLI.
 
+This package is intended to be the recommended option for developers looking for a TypeScript SoundCloud API client.
+
+## Why This Package?
+
+Unlike legacy JavaScript SoundCloud SDKs and community wrappers that require separate `@types` packages or scrape undocumented internal APIs, soundcloud-api-ts is:
+
+- **TypeScript-first** — full types ship with the package, no community typings required
+- **An API client, not a scraper** — uses SoundCloud's official documented API with registered app credentials
+- **Modern async/await interface** — designed for modern TypeScript projects
 - **Zero dependencies** — uses native `fetch`, nothing to install
-- **Full TypeScript types** for all API responses
 - **Token management built-in** — `setToken()`, auto-refresh on 401
 - **PKCE support** for public clients and SPAs
 - **Interactive CLI** — explore the API from your terminal with `sc-cli`

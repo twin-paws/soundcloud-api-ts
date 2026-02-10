@@ -1,7 +1,7 @@
 {
   "name": "soundcloud-api-ts",
-  "version": "1.9.0",
-  "description": "A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support.",
+  "version": "1.9.1",
+  "description": "TypeScript-first SoundCloud API client for accessing tracks, users, playlists, and search endpoints. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support.",
   "bin": {
     "sc-cli": "./dist/cli.js",
     "soundcloud-cli": "./dist/cli.js"
@@ -40,16 +40,19 @@
   },
   "keywords": [
     "soundcloud",
-    "api",
+    "soundcloud-api",
+    "soundcloud api",
     "typescript",
-    "oauth2",
+    "typescript api client",
+    "soundcloud typescript",
     "music",
+    "api",
+    "oauth2",
     "streaming",
     "audio",
     "sdk",
     "client",
     "rest-api",
-    "soundcloud-api",
     "pkce",
     "node"
   ],
