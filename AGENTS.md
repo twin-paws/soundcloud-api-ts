@@ -133,26 +133,64 @@ try {
 
 ```
 src/
-  client/SoundCloudClient.ts  — Main client class with all namespaced methods
+  index.ts                     — All public exports (source of truth)
+  client/SoundCloudClient.ts   — Main client class with all namespaced methods
+  client/http.ts               — scFetch, scFetchUrl (HTTP layer with retry)
+  client/paginate.ts           — paginate, paginateItems, fetchAll helpers
   auth/                        — Standalone auth functions + PKCE
+  users/                       — Standalone user functions (getMe, getUser, etc.)
   tracks/                      — Standalone track functions
-  users/                       — (methods are inline in client)
   playlists/                   — Standalone playlist functions
   search/                      — Standalone search functions
-  resolve/                     — Standalone resolve function
+  me/                          — Standalone /me endpoint functions
   likes/                       — Standalone like/unlike functions
   reposts/                     — Standalone repost functions
+  resolve/                     — Standalone resolve function
+  utils/                       — Widget URL helper
   errors.ts                    — SoundCloudError class
   types/api.ts                 — All TypeScript type definitions
 ```
 
+## Key Files
+
+- `src/index.ts` — single source of truth for all exports
+- `src/types/api.ts` — all TypeScript interfaces
+- `src/client/SoundCloudClient.ts` — the main client class
+- `tsup.config.ts` — build config (dual ESM/CJS)
+- `vitest.config.ts` — test config
+- `typedoc.json` — API docs generation config
+
 ## Build & Test
 
 ```bash
-npm run build    # TypeScript compilation
-npm run lint     # ESLint
-npm test         # Vitest
+pnpm build       # tsup → dist/ (ESM + CJS + .d.ts)
+pnpm lint        # ESLint
+pnpm typecheck   # tsc --noEmit
+pnpm test        # Vitest
+pnpm test:watch  # Vitest watch mode
+pnpm docs        # TypeDoc → API docs site
 ```
+
+## How to Add a New Endpoint
+
+1. Create a standalone function in the appropriate `src/<category>/` directory
+2. Export it from `src/<category>/index.ts`
+3. Re-export from `src/index.ts`
+4. Add a namespaced method in `SoundCloudClient` (in `src/client/SoundCloudClient.ts`)
+5. Add tests in `src/<category>/__tests__/`
+6. Update `llms.txt` and `llms-full.txt` with the new function signature
+
+## Publishing
+
+Uses **Trusted Publishing** via GitHub Releases:
+1. Bump version in `package.json`
+2. Commit and push to `main`
+3. Create a GitHub Release with the version tag (e.g. `v1.9.2`)
+4. GitHub Actions CI builds and publishes to npm automatically
+
+## Related Packages
+
+- [soundcloud-api-ts-next](https://github.com/twin-paws/soundcloud-api-ts-next) — React hooks + Next.js API routes (depends on this package)
 
 ## Full Documentation
 
