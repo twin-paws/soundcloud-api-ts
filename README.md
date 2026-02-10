@@ -77,6 +77,9 @@ sc-cli track 293
 # View user profile
 sc-cli user 12345
 
+# Play a track in your terminal (mpv recommended)
+sc-cli play 293
+
 # Get stream URLs
 sc-cli stream 293
 
@@ -97,8 +100,11 @@ Every command supports `--json` for machine-readable output (great for piping to
 ```
 ⚡ sc-cli — Explore the SoundCloud API from your terminal
 
-Commands: auth, login, search, track, user, playlist, stream, resolve, me, likes
-Options:  --json (raw JSON output), --help (per-command help)
+Commands: auth, login, search, track, user, playlist, play, stream, resolve, me, likes
+Options:  --json (raw JSON output), --url (play: print URL only), --help (per-command help)
+
+Play controls: [space] pause/resume (mpv/ffplay), [q] quit
+Supported players: mpv (recommended — IPC pause/resume), ffplay, afplay (macOS)
 ```
 
 ## Quick Start

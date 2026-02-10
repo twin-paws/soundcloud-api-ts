@@ -6,6 +6,8 @@ import * as http from "node:http";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+import { execSync, spawn, type ChildProcess } from "node:child_process";
+import * as net from "node:net";
 
 // ── ANSI Colors ──────────────────────────────────────────────────────────────
 
@@ -592,6 +594,245 @@ Shows your liked tracks. Requires \`sc-cli login\` first.
   console.log();
 }
 
+// ── Play Command ─────────────────────────────────────────────────────────────
+
+const isWindows = process.platform === "win32";
+
+/** Detect an available audio player binary */
+function detectPlayer(): string | null {
+  const candidates = isWindows ? ["mpv", "ffplay"] : ["mpv", "ffplay", "afplay"];
+  const whichCmd = isWindows ? "where.exe" : "command -v";
+  for (const bin of candidates) {
+    try {
+      execSync(`${whichCmd} ${bin}`, { stdio: "ignore" });
+      return bin;
+    } catch {
+      // not found, try next
+    }
+  }
+  return null;
+}
+
+/** IPC socket path for mpv (shared between playerArgs and cmdPlay) */
+const mpvSocketPath = isWindows ? "\\\\.\\pipe\\sc-cli-mpv" : path.join(os.tmpdir(), "sc-cli-mpv.sock");
+
+/** Build player args (suppress visual output where possible) */
+function playerArgs(bin: string, filePath: string): string[] {
+  switch (bin) {
+    case "mpv":
+      return ["--no-video", "--no-terminal", `--input-ipc-server=${mpvSocketPath}`, filePath];
+    case "ffplay":
+      return ["-nodisp", "-autoexit", "-loglevel", "quiet", filePath];
+    case "afplay":
+      return [filePath];
+    default:
+      return [filePath];
+  }
+}
+
+async function cmdPlay(args: ParsedArgs): Promise<void> {
+  if (args.flags["help"]) {
+    console.log(`
+${col(c.bold, "Usage:")} sc-cli play <id> [--url] [--json]
+
+Play a SoundCloud track in your terminal.
+
+${col(c.bold, "Options:")}
+  ${col(c.yellow, "--url")}     Print the best stream URL and exit
+  ${col(c.yellow, "--json")}    Print raw stream URLs JSON and exit
+
+${col(c.bold, "Examples:")}
+  sc-cli play 123456
+  sc-cli play 123456 --url
+`);
+    return;
+  }
+
+  const id = args.positional[0];
+  if (!id) die("Usage: sc-cli play <track-id>");
+
+  const config = loadConfig();
+  const client = getClient(config);
+  await ensureToken(client, config);
+
+  // Fetch track info and streams in parallel
+  const spinner = createSpinner("Fetching track…");
+  const [track, streams] = await Promise.all([
+    client.tracks.getTrack(id),
+    client.tracks.getStreams(id),
+  ]);
+  spinner.stop();
+
+  // --json: dump raw stream URLs
+  if (args.flags["json"]) {
+    console.log(JSON.stringify(streams, null, 2));
+    return;
+  }
+
+  // Pick best stream URL
+  const streamUrl =
+    streams.http_mp3_128_url ||
+    streams.hls_mp3_128_url ||
+    streams.hls_aac_160_url ||
+    streams.preview_mp3_128_url;
+
+  if (!streamUrl) die("No stream URL available for this track.");
+
+  // --url: just print and exit
+  if (args.flags["url"]) {
+    console.log(streamUrl);
+    return;
+  }
+
+  // Detect player
+  const playerBin = detectPlayer();
+  if (!playerBin) die("No audio player found. Install mpv, ffplay, or afplay.");
+
+  // Show track header
+  const title = track.title ?? "Untitled";
+  const artist = track.user?.username ?? "Unknown";
+  const durationMs = track.duration ?? 0;
+  const durationStr = formatDuration(durationMs);
+
+  console.log(`\n${col(c.bold + c.cyan, "⚡ Now Playing")}\n`);
+  console.log(`  ${col(c.dim, "Title:")}    ${col(c.bold + c.white, title)}`);
+  console.log(`  ${col(c.dim, "Artist:")}   ${col(c.magenta, artist)}`);
+  console.log(`  ${col(c.dim, "Duration:")} ${col(c.yellow, durationStr)}`);
+  console.log(`  ${col(c.dim, "Player:")}   ${playerBin}\n`);
+
+  // Download to temp file
+  const tmpFile = path.join(os.tmpdir(), `sc-play-${id}-${Date.now()}.mp3`);
+  const dlSpinner = createSpinner("Downloading stream…");
+  try {
+    const resp = await fetch(streamUrl, {
+      headers: { Authorization: `OAuth ${client.accessToken}` },
+    });
+    if (!resp.ok) die(`Download failed: HTTP ${resp.status}`);
+    const buffer = Buffer.from(await resp.arrayBuffer());
+    fs.writeFileSync(tmpFile, buffer);
+  } catch (err) {
+    dlSpinner.stop();
+    die(`Download failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  dlSpinner.stop();
+
+  // Spawn player
+  const totalSec = Math.floor(durationMs / 1000);
+  let player: ChildProcess | null = null;
+  let progressTimer: ReturnType<typeof setInterval> | null = null;
+  let startTime = Date.now();
+  const usesMpv = playerBin === "mpv";
+
+  // Restore terminal state helper
+  const restoreStdin = () => {
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(false);
+      process.stdin.pause();
+    }
+  };
+
+  // Cleanup helper
+  const cleanup = () => {
+    if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    restoreStdin();
+    process.stdout.write("\n");
+    if (player && !player.killed) player.kill();
+    try { fs.unlinkSync(tmpFile); } catch { /* ignore */ }
+    if (usesMpv) try { fs.unlinkSync(mpvSocketPath); } catch { /* ignore */ }
+  };
+
+  // Handle Ctrl+C
+  const onSigint = () => { cleanup(); process.exit(0); };
+  process.on("SIGINT", onSigint);
+
+  return new Promise<void>((resolve) => {
+    player = spawn(playerBin, playerArgs(playerBin, tmpFile), { stdio: "ignore" });
+    startTime = Date.now();
+    let paused = false;
+    let pausedAt = 0; // total ms spent paused
+    let pauseStart = 0;
+
+    // Live progress bar
+    const barWidth = 30;
+    const drawProgress = () => {
+      const pauseOffset = paused ? Date.now() - pauseStart : 0;
+      const elapsed = Math.floor((Date.now() - startTime - pausedAt - pauseOffset) / 1000);
+      const capped = Math.min(Math.max(elapsed, 0), totalSec);
+      const ratio = totalSec > 0 ? capped / totalSec : 0;
+      const filled = Math.round(ratio * barWidth);
+      const empty = barWidth - filled;
+      const bar = "█".repeat(filled) + "░".repeat(empty);
+      const elapsedStr = formatDuration(capped * 1000);
+      const icon = paused ? col(c.yellow, "⏸") : col(c.green, "▶");
+      process.stdout.write(`\r  ${icon} [${col(c.cyan, bar)}] ${elapsedStr} / ${durationStr} `);
+    };
+    drawProgress(); // draw immediately
+    progressTimer = setInterval(drawProgress, 1000);
+
+    // Keyboard controls
+    // afplay has no pause support; ffplay on Windows can't use SIGSTOP/SIGCONT
+    const supportsPause = playerBin === "mpv" || (playerBin === "ffplay" && !isWindows);
+
+    const sendMpvCommand = (cmd: string[]) => {
+      if (!usesMpv) return;
+      try {
+        const sock = net.createConnection(mpvSocketPath);
+        sock.on("error", () => { /* ignore connection errors */ });
+        sock.write(JSON.stringify({ command: cmd }) + "\n");
+        sock.end();
+      } catch { /* ignore */ }
+    };
+
+    if (process.stdin.isTTY) {
+      process.stdin.setRawMode(true);
+      process.stdin.resume();
+      process.stdin.on("data", (key: Buffer) => {
+        const ch = key.toString();
+        if (ch === " " && supportsPause && player && !player.killed) {
+          if (usesMpv) {
+            // Toggle pause via mpv IPC
+            sendMpvCommand(["cycle", "pause"]);
+          } else {
+            // Signal-based fallback for ffplay
+            if (paused) player.kill("SIGCONT");
+            else player.kill("SIGSTOP");
+          }
+          if (paused) {
+            pausedAt += Date.now() - pauseStart;
+            paused = false;
+          } else {
+            pauseStart = Date.now();
+            paused = true;
+          }
+          drawProgress();
+        } else if (ch === "q" || ch === "\x03") {
+          // q or Ctrl+C
+          if (usesMpv) sendMpvCommand(["quit"]);
+          cleanup();
+          process.removeListener("SIGINT", onSigint);
+          process.exit(0);
+        }
+      });
+    }
+
+    const controlHint = supportsPause ? "[space] pause/play  [q] quit" : "[q] quit";
+    console.log(`  ${col(c.dim, controlHint)}\n`);
+
+    player.on("close", () => {
+      cleanup();
+      process.removeListener("SIGINT", onSigint);
+      console.log(`\n${col(c.green, "✔")} Playback complete.`);
+      resolve();
+    });
+
+    player.on("error", (err) => {
+      cleanup();
+      process.removeListener("SIGINT", onSigint);
+      die(`Player error: ${err.message}`);
+    });
+  });
+}
+
 function showHelp(): void {
   console.log(`
 ${col(c.bold + c.cyan, "⚡ sc-cli")} ${col(c.dim, "— Explore the SoundCloud API from your terminal")}
@@ -607,6 +848,7 @@ ${col(c.bold, "Commands:")}
   ${col(c.green, "track")}  <id>       Show track details
   ${col(c.green, "user")}   <id>       Show user profile
   ${col(c.green, "playlist")} <id>     Show playlist with track listing
+  ${col(c.green, "play")}   <id>       Play a track in your terminal
   ${col(c.green, "stream")} <id>       Get stream URLs for a track
   ${col(c.green, "resolve")} <url>     Resolve a SoundCloud URL
   ${col(c.green, "me")}                Show your profile (requires login)
@@ -619,6 +861,7 @@ ${col(c.bold, "Options:")}
 ${col(c.bold, "Examples:")}
   ${col(c.dim, "$")} sc-cli auth
   ${col(c.dim, "$")} sc-cli search "lofi beats"
+  ${col(c.dim, "$")} sc-cli play 293
   ${col(c.dim, "$")} sc-cli track 293 --json
   ${col(c.dim, "$")} sc-cli resolve https://soundcloud.com/artist/track
   ${col(c.dim, "$")} sc-cli login
@@ -634,7 +877,7 @@ ${col(c.dim, "Powered by")} soundcloud-api-ts
 async function main(): Promise<void> {
   const args = parseArgs(process.argv);
 
-  if (args.flags["help"] && !["search", "track", "user", "playlist", "stream", "resolve", "me", "likes"].includes(args.command)) {
+  if (args.flags["help"] && !["search", "track", "user", "playlist", "play", "stream", "resolve", "me", "likes"].includes(args.command)) {
     showHelp();
     return;
   }
@@ -661,6 +904,9 @@ async function main(): Promise<void> {
         break;
       case "playlist":
         await cmdPlaylist(args);
+        break;
+      case "play":
+        await cmdPlay(args);
         break;
       case "stream":
         await cmdStream(args);
