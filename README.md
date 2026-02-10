@@ -49,6 +49,8 @@ A fully-typed TypeScript client for the SoundCloud API. Zero dependencies, nativ
 >
 > `soundcloud-api-ts` uses the **official documented API** (`api.soundcloud.com`) with registered app credentials, OAuth 2.1 as specified by SoundCloud, PKCE for public clients, and automatic token refresh.
 
+**Coming from `soundcloud.ts`?** See the [Migration Guide](docs/MIGRATING.md) — most changes are find-and-replace.
+
 ## Install
 
 ```bash

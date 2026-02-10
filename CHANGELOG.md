@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.3] - 2026-02-09
+
+### Added
+
+- **Migration guide** (`docs/MIGRATING.md`) — complete guide for switching from `soundcloud.ts`, with API mapping, type mapping, setup differences, and side-by-side code examples
+- Migration guide link in README comparison section
+
+## [1.8.2] - 2026-02-09
+
+### Changed
+
+- Standardized on pnpm (removed `package-lock.json`)
+- CI workflows use `pnpm/action-setup@v4`
+- ESLint pinned to `^9` (peer-required by `@typescript-eslint` v8)
+- CHANGELOG updated through v1.8.1
+
 ## [1.8.1] - 2026-02-09
 
 ### Added
