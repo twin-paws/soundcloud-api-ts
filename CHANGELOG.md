@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.4] - 2026-02-09
+
+### Changed
+
+- **Trusted Publishing** — publish workflow uses OIDC instead of npm tokens (no more token rotation)
+- CI publish job now uses Node 22 (required for trusted publishing)
+- Removed `NPM_TOKEN` secret dependency
+
 ## [1.8.3] - 2026-02-09
 
 ### Added
