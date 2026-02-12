@@ -22,13 +22,15 @@ import type { SoundCloudToken } from "../types/api.js";
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
  */
 export const getClientToken = (clientId: string, clientSecret: string): Promise<SoundCloudToken> => {
+  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   return scFetch<SoundCloudToken>({
     path: "/oauth/token",
     method: "POST",
+    headers: {
+      Authorization: `Basic ${basicAuth}`,
+    },
     body: new URLSearchParams({
       grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
     }),
   });
 };

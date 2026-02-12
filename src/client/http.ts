@@ -15,6 +15,8 @@ export interface RequestOptions {
   token?: string;
   /** Request body — automatically serialized based on type */
   body?: Record<string, unknown> | FormData | URLSearchParams;
+  /** Additional headers to include in the request */
+  headers?: Record<string, string>;
   /** Override the Content-Type header (defaults to "application/json" for object bodies) */
   contentType?: string;
 }
@@ -123,10 +125,11 @@ export async function scFetch<T>(
     const url = `${isAuthPath ? AUTH_BASE_URL : BASE_URL}${options.path}`;
     const headers: Record<string, string> = {
       Accept: "application/json",
+      ...options.headers,
     };
 
     const token = tokenOverride ?? options.token;
-    if (token) {
+    if (token && !headers["Authorization"]) {
       headers["Authorization"] = `OAuth ${token}`;
     }
 
