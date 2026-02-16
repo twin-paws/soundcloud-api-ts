@@ -1,4 +1,4 @@
-import { scFetch, scFetchUrl, type AutoRefreshContext, type RetryConfig } from "./http.js";
+import { scFetch, scFetchUrl, type AutoRefreshContext, type RetryConfig, type SCRequestTelemetry } from "./http.js";
 import { paginate, paginateItems, fetchAll } from "./paginate.js";
 import type {
   SoundCloudToken,
@@ -37,6 +37,8 @@ export interface SoundCloudClientConfig {
   retryBaseDelay?: number;
   /** Optional debug logger callback for retry attempts and other internal events */
   onDebug?: (message: string) => void;
+  /** Called after every API request with structured telemetry (timing, status, retries) */
+  onRequest?: (telemetry: SCRequestTelemetry) => void;
 }
 
 /**
@@ -135,11 +137,13 @@ export class SoundCloudClient {
           },
           setToken: (a, r) => this.setToken(a, r),
           retry: retryConfig,
+          onRequest: config.onRequest,
         }
       : {
           getToken,
           setToken: /* v8 ignore next */ (a, r) => this.setToken(a, r),
           retry: retryConfig,
+          onRequest: config.onRequest,
         };
 
     this.auth = new SoundCloudClient.Auth(this.config);
@@ -195,7 +199,8 @@ export class SoundCloudClient {
    */
   paginate<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>): AsyncGenerator<T[], void, undefined> {
     const token = this._accessToken;
-    return paginate(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token));
+    const onReq = this.config.onRequest;
+    return paginate(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq));
   }
 
   /**
@@ -213,7 +218,8 @@ export class SoundCloudClient {
    */
   paginateItems<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>): AsyncGenerator<T, void, undefined> {
     const token = this._accessToken;
-    return paginateItems(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token));
+    const onReq = this.config.onRequest;
+    return paginateItems(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq));
   }
 
   /**
@@ -232,7 +238,8 @@ export class SoundCloudClient {
    */
   fetchAll<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>, options?: { maxItems?: number }): Promise<T[]> {
     const token = this._accessToken;
-    return fetchAll(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token), options);
+    const onReq = this.config.onRequest;
+    return fetchAll(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq), options);
   }
 }
 

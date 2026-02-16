@@ -125,9 +125,10 @@ try {
 2. **User token vs client token** — write operations (like, repost, comment, follow, create/update/delete) require a user token obtained via the authorization code flow. A client credentials token won't work.
 3. **Rate limits exist** — SoundCloud returns 429 when rate limited. The client has built-in retry with exponential backoff (configurable via `maxRetries` and `retryBaseDelay`).
 4. **Auto token refresh** — pass `onTokenRefresh` in the config to automatically refresh expired tokens on 401.
-5. **No env vars** — the package reads no environment variables. Pass `clientId`, `clientSecret`, and `redirectUri` directly to the constructor.
-6. **IDs can be numbers or strings** — all ID parameters accept `string | number`.
-7. **Search pagination** — search uses zero-based `pageNumber` (10 results per page), not cursor-based pagination.
+5. **Request telemetry** — pass `onRequest` in the config to receive `SCRequestTelemetry` after every request (method, path, duration, status, retries, error). Fires on all paths including pagination and retries.
+6. **No env vars** — the package reads no environment variables. Pass `clientId`, `clientSecret`, and `redirectUri` directly to the constructor.
+7. **IDs can be numbers or strings** — all ID parameters accept `string | number`.
+8. **Search pagination** — search uses zero-based `pageNumber` (10 results per page), not cursor-based pagination.
 
 ## Project Structure (for contributors)
 

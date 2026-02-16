@@ -2,7 +2,7 @@
 export { SoundCloudClient } from "./client/SoundCloudClient.js";
 export type { SoundCloudClientConfig, TokenOption } from "./client/SoundCloudClient.js";
 export { scFetch, scFetchUrl } from "./client/http.js";
-export type { RequestOptions, RetryConfig } from "./client/http.js";
+export type { RequestOptions, RetryConfig, SCRequestTelemetry } from "./client/http.js";
 
 // Errors
 export { SoundCloudError } from "./errors.js";

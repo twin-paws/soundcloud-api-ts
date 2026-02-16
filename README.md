@@ -423,6 +423,35 @@ const sc = new SoundCloudClient({
 - **401 errors** trigger `onTokenRefresh` (if configured) instead of retry
 - Backoff formula: `baseDelay × 2^attempt` with jitter
 
+## Request Telemetry
+
+Hook into every API request for logging, metrics, or observability:
+
+```ts
+import { SoundCloudClient, type SCRequestTelemetry } from 'soundcloud-api-ts';
+
+const sc = new SoundCloudClient({
+  clientId: '...',
+  clientSecret: '...',
+  onRequest: (t: SCRequestTelemetry) => {
+    console.log(`[SC] ${t.method} ${t.path} status=${t.status} ${t.durationMs}ms retries=${t.retryCount}`);
+  },
+});
+```
+
+The `SCRequestTelemetry` object includes:
+
+| Field | Type | Description |
+|---|---|---|
+| `method` | `"GET" \| "POST" \| "PUT" \| "DELETE"` | HTTP method |
+| `path` | `string` | API path or full URL (for pagination) |
+| `durationMs` | `number` | Total wall-clock time including retries |
+| `status` | `number` | Final HTTP status code |
+| `retryCount` | `number` | Number of retries (0 = first attempt succeeded) |
+| `error` | `string?` | Error message if the request failed |
+
+Telemetry fires on every code path: direct calls, pagination, retries, and 401 token refresh. It's fully optional — zero overhead when `onRequest` is not set.
+
 ## API Terms Compliance
 
 This package is built on SoundCloud's **official documented API** (`api.soundcloud.com`) and follows the [API Terms of Use](https://developers.soundcloud.com/docs/api/terms-of-use):

@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.10.0
+# soundcloud-api-ts v1.11.0
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -189,6 +189,16 @@ const sc = new SoundCloudClient({
   },
 });
 ```
+
+### Request Telemetry
+```ts
+const sc = new SoundCloudClient({
+  clientId: '...', clientSecret: '...',
+  onRequest: (t) => console.log(`[SC] ${t.method} ${t.path} ${t.status} ${t.durationMs}ms retries=${t.retryCount}`),
+});
+```
+
+`SCRequestTelemetry`: `{ method, path, durationMs, status, retryCount, error? }` — fires after every request including pagination and retries.
 
 ## Full Documentation
 

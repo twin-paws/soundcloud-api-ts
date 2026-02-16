@@ -22,6 +22,24 @@ export interface RequestOptions {
 }
 
 /**
+ * Structured telemetry emitted after every API request.
+ */
+export interface SCRequestTelemetry {
+  /** HTTP method used */
+  method: "GET" | "POST" | "PUT" | "DELETE";
+  /** API path or full URL */
+  path: string;
+  /** Total duration including retries, in milliseconds */
+  durationMs: number;
+  /** Final HTTP status code */
+  status: number;
+  /** Number of retries performed (0 = succeeded on first attempt) */
+  retryCount: number;
+  /** Error message if the request ultimately failed */
+  error?: string;
+}
+
+/**
  * Configuration for automatic retry with exponential backoff on transient errors.
  */
 export interface RetryConfig {
@@ -46,6 +64,8 @@ export interface AutoRefreshContext {
   setToken: (accessToken: string, refreshToken?: string) => void;
   /** Retry configuration for this context */
   retry?: RetryConfig;
+  /** Called after every API request with structured telemetry */
+  onRequest?: (telemetry: SCRequestTelemetry) => void;
 }
 
 const DEFAULT_RETRY: RetryConfig = { maxRetries: 3, retryBaseDelay: 1000 };
@@ -117,8 +137,25 @@ async function parseErrorBody(response: { json(): Promise<unknown> }): Promise<u
 export async function scFetch<T>(
   options: RequestOptions,
   refreshCtx?: AutoRefreshContext,
+  onRequest?: (telemetry: SCRequestTelemetry) => void,
 ): Promise<T> {
   const retryConfig = refreshCtx?.retry ?? DEFAULT_RETRY;
+  const telemetryCallback = onRequest ?? refreshCtx?.onRequest;
+  const startTime = Date.now();
+  let retryCount = 0;
+  let finalStatus = 0;
+
+  const emitTelemetry = (error?: string) => {
+    if (!telemetryCallback) return;
+    telemetryCallback({
+      method: options.method,
+      path: options.path,
+      durationMs: Date.now() - startTime,
+      status: finalStatus,
+      retryCount,
+      ...(error ? { error } : {}),
+    });
+  };
 
   const execute = async (tokenOverride?: string): Promise<T> => {
     const isAuthPath = options.path.startsWith("/oauth");
@@ -158,28 +195,39 @@ export async function scFetch<T>(
         redirect: "manual",
       });
 
+      finalStatus = response.status;
+
       if (response.status === 302) {
         const location = response.headers.get("location");
-        if (location) return location as T;
+        if (location) {
+          emitTelemetry();
+          return location as T;
+        }
       }
 
       if (response.status === 204 || response.headers.get("content-length") === "0") {
+        emitTelemetry();
         return undefined as T;
       }
 
       if (response.ok) {
-        return response.json() as Promise<T>;
+        const result = response.json() as Promise<T>;
+        emitTelemetry();
+        return result;
       }
 
       // Don't retry 401 (handled by token refresh) or non-retryable 4xx
       if (!isRetryable(response.status)) {
         const body = await parseErrorBody(response);
-        throw new SoundCloudError(response.status, response.statusText, body as SoundCloudErrorBody);
+        const err = new SoundCloudError(response.status, response.statusText, body as SoundCloudErrorBody);
+        emitTelemetry(err.message);
+        throw err;
       }
 
       lastResponse = response;
 
       if (attempt < retryConfig.maxRetries) {
+        retryCount = attempt + 1;
         const delayMs = getRetryDelay(response, attempt, retryConfig);
         retryConfig.onDebug?.(
           `Retry ${attempt + 1}/${retryConfig.maxRetries} after ${Math.round(delayMs)}ms (status ${response.status})`,
@@ -190,7 +238,9 @@ export async function scFetch<T>(
 
     // All retries exhausted
     const body = await parseErrorBody(lastResponse!);
-    throw new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as SoundCloudErrorBody);
+    const err = new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as SoundCloudErrorBody);
+    emitTelemetry(err.message);
+    throw err;
   };
 
   try {
@@ -235,37 +285,65 @@ export async function scFetchUrl<T>(
   url: string,
   token?: string,
   retryConfig?: RetryConfig,
+  onRequest?: (telemetry: SCRequestTelemetry) => void,
 ): Promise<T> {
   const config = retryConfig ?? DEFAULT_RETRY;
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers["Authorization"] = `OAuth ${token}`;
+
+  const startTime = Date.now();
+  let retryCount = 0;
+  let finalStatus = 0;
+
+  const emitTelemetry = (error?: string) => {
+    if (!onRequest) return;
+    onRequest({
+      method: "GET",
+      path: url,
+      durationMs: Date.now() - startTime,
+      status: finalStatus,
+      retryCount,
+      ...(error ? { error } : {}),
+    });
+  };
 
   let lastResponse: Awaited<ReturnType<typeof fetch>> | undefined;
 
   for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
     const response = await fetch(url, { method: "GET", headers, redirect: "manual" });
 
+    finalStatus = response.status;
+
     if (response.status === 302) {
       const location = response.headers.get("location");
-      if (location) return location as T;
+      if (location) {
+        emitTelemetry();
+        return location as T;
+      }
     }
 
     if (response.status === 204 || response.headers.get("content-length") === "0") {
+      emitTelemetry();
       return undefined as T;
     }
 
     if (response.ok) {
-      return response.json() as Promise<T>;
+      const result = response.json() as Promise<T>;
+      emitTelemetry();
+      return result;
     }
 
     if (!isRetryable(response.status)) {
       const body = await parseErrorBody(response);
-      throw new SoundCloudError(response.status, response.statusText, body as SoundCloudErrorBody);
+      const err = new SoundCloudError(response.status, response.statusText, body as SoundCloudErrorBody);
+      emitTelemetry(err.message);
+      throw err;
     }
 
     lastResponse = response;
 
     if (attempt < config.maxRetries) {
+      retryCount = attempt + 1;
       const delayMs = getRetryDelay(response, attempt, config);
       config.onDebug?.(
         `Retry ${attempt + 1}/${config.maxRetries} after ${Math.round(delayMs)}ms (status ${response.status})`,
@@ -275,5 +353,7 @@ export async function scFetchUrl<T>(
   }
 
   const body = await parseErrorBody(lastResponse!);
-  throw new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as SoundCloudErrorBody);
+  const err = new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as SoundCloudErrorBody);
+  emitTelemetry(err.message);
+  throw err;
 }

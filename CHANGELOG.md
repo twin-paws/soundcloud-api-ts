@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.0] - 2026-02-15
+
+### Added
+
+- **Request telemetry hook**: New `onRequest` callback on `SoundCloudClientConfig` — called after every API request with structured telemetry (`SCRequestTelemetry`)
+- Telemetry includes: HTTP method, path, total duration (including retries), final status code, retry count, and error message (if failed)
+- Covers all code paths: `scFetch`, `scFetchUrl`, pagination (`paginate`, `paginateItems`, `fetchAll`), auto token refresh
+- Fully optional — zero breaking changes, no overhead when not configured
+- New exported type: `SCRequestTelemetry`
+
+### Example
+
+```ts
+const sc = new SoundCloudClient({
+  clientId: '...',
+  clientSecret: '...',
+  onRequest: (t) => console.log(`[SC] ${t.method} ${t.path} ${t.status} ${t.durationMs}ms retries=${t.retryCount}`),
+});
+```
+
 ## [1.10.0] - 2026-02-12
 
 ### Changed
