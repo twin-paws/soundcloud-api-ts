@@ -122,7 +122,7 @@ describe("Telemetry (onRequest)", () => {
       clientId: "cid",
       clientSecret: "cs",
       onRequest,
-      onTokenRefresh: async () => ({ access_token: "newtok", refresh_token: "newrt" }),
+      onTokenRefresh: async () => ({ access_token: "newtok", refresh_token: "newrt", expires_in: 3600, scope: "", token_type: "bearer" }),
     });
     client.setToken("oldtok", "oldrt");
 
