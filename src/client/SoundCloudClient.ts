@@ -304,13 +304,17 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
      */
     async getClientToken(): Promise<SoundCloudToken> {
+      const basicAuth = Buffer.from(
+        `${this.config.clientId}:${this.config.clientSecret}`,
+      ).toString("base64");
       return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+        },
         body: new URLSearchParams({
           grant_type: "client_credentials",
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
         }),
       });
     }

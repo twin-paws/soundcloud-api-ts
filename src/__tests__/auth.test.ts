@@ -7,15 +7,18 @@ const config = { clientId: "cid", clientSecret: "csecret", redirectUri: "http://
 beforeEach(() => { vi.restoreAllMocks(); });
 
 describe("auth", () => {
-  it("getClientToken sends form-encoded body with correct grant_type", async () => {
+  it("getClientToken sends Basic Auth header and client_credentials grant", async () => {
     const fn = mockFetch({ json: { access_token: "tok", token_type: "bearer" } });
     const client = new SoundCloudClient(config);
     const result = await client.auth.getClientToken();
     expect(result.access_token).toBe("tok");
+    const headers = fn.mock.calls[0][1].headers;
+    const expectedBasic = Buffer.from("cid:csecret").toString("base64");
+    expect(headers.Authorization).toBe(`Basic ${expectedBasic}`);
     const body = fn.mock.calls[0][1].body as URLSearchParams;
     expect(body.get("grant_type")).toBe("client_credentials");
-    expect(body.get("client_id")).toBe("cid");
-    expect(body.get("client_secret")).toBe("csecret");
+    expect(body.get("client_id")).toBeNull();
+    expect(body.get("client_secret")).toBeNull();
   });
 
   it("getUserToken sends code", async () => {

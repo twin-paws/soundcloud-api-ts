@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.3] - 2026-02-16
+
+### Fixed
+
+- **Critical: `getClientToken` auth method** — `SoundCloudClient.auth.getClientToken()` now sends credentials via Basic Auth header instead of form body params. SoundCloud's OAuth 2.1 endpoint rejects body-param credentials with `invalid_client`. The standalone `getClientToken()` function was already correct; only the class method was affected.
+
 ## [1.11.2] - 2026-02-15
 
 ### Added
