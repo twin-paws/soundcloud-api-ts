@@ -255,6 +255,7 @@ export namespace SoundCloudClient {
    */
   export class Auth {
     constructor(private config: SoundCloudClientConfig) {}
+    private fetch<T>(opts: Parameters<typeof scFetch>[0]) { return scFetch<T>(opts, undefined, this.config.onRequest); }
 
     /**
      * Build the authorization URL to redirect users to SoundCloud's OAuth login page.
@@ -303,7 +304,7 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
      */
     async getClientToken(): Promise<SoundCloudToken> {
-      return scFetch<SoundCloudToken>({
+      return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
         body: new URLSearchParams({
@@ -339,7 +340,7 @@ export namespace SoundCloudClient {
         code,
       };
       if (codeVerifier) params.code_verifier = codeVerifier;
-      return scFetch<SoundCloudToken>({
+      return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
         body: new URLSearchParams(params),
@@ -362,7 +363,7 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
      */
     async refreshUserToken(refreshToken: string): Promise<SoundCloudToken> {
-      return scFetch<SoundCloudToken>({
+      return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
         body: new URLSearchParams({
