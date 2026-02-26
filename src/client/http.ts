@@ -40,6 +40,22 @@ export interface SCRequestTelemetry {
 }
 
 /**
+ * Information passed to the `onRetry` callback on each retry attempt.
+ */
+export interface RetryInfo {
+  /** Which retry attempt this is (1-based) */
+  attempt: number;
+  /** Delay in milliseconds before this retry fires */
+  delayMs: number;
+  /** Human-readable reason (e.g. "429 Too Many Requests") */
+  reason: string;
+  /** HTTP status that triggered the retry, if applicable */
+  status?: number;
+  /** The URL that was requested */
+  url: string;
+}
+
+/**
  * Configuration for automatic retry with exponential backoff on transient errors.
  */
 export interface RetryConfig {
@@ -49,6 +65,8 @@ export interface RetryConfig {
   retryBaseDelay: number;
   /** Optional callback for debug logging of retry attempts */
   onDebug?: (message: string) => void;
+  /** Optional callback fired before each retry with structured retry info */
+  onRetry?: (info: RetryInfo) => void;
 }
 
 /**
@@ -93,7 +111,7 @@ function getRetryDelay(
     const retryAfter = response.headers.get("retry-after");
     if (retryAfter) {
       const seconds = Number(retryAfter);
-      if (!Number.isNaN(seconds)) return seconds * 1000;
+      if (!Number.isNaN(seconds)) return Math.min(seconds * 1000, 60000);
     }
   }
   // Exponential backoff with jitter
@@ -211,9 +229,28 @@ export async function scFetch<T>(
       }
 
       if (response.ok) {
-        const result = response.json() as Promise<T>;
+        const data = await response.json();
+        // Attach non-enumerable _meta so callers can access status/headers without breaking toEqual checks
+        if (typeof data === "object" && data !== null) {
+          const metaHeaders: Record<string, string> = {};
+          if (typeof response.headers.forEach === "function") {
+            response.headers.forEach((value: string, key: string) => {
+              metaHeaders[key] = value;
+            });
+          }
+          try {
+            Object.defineProperty(data, "_meta", {
+              value: { status: response.status, headers: metaHeaders },
+              enumerable: false,
+              configurable: true,
+              writable: true,
+            });
+          } catch {
+            // frozen objects — skip
+          }
+        }
         emitTelemetry();
-        return result;
+        return data as T;
       }
 
       // Don't retry 401 (handled by token refresh) or non-retryable 4xx
@@ -232,6 +269,13 @@ export async function scFetch<T>(
         retryConfig.onDebug?.(
           `Retry ${attempt + 1}/${retryConfig.maxRetries} after ${Math.round(delayMs)}ms (status ${response.status})`,
         );
+        retryConfig.onRetry?.({
+          attempt: retryCount,
+          delayMs,
+          reason: `${response.status} ${response.statusText}`,
+          status: response.status,
+          url,
+        });
         await delay(delayMs);
       }
     }
@@ -328,9 +372,27 @@ export async function scFetchUrl<T>(
     }
 
     if (response.ok) {
-      const result = response.json() as Promise<T>;
+      const data = await response.json();
+      if (typeof data === "object" && data !== null) {
+        const metaHeaders: Record<string, string> = {};
+        if (typeof response.headers.forEach === "function") {
+          response.headers.forEach((value: string, key: string) => {
+            metaHeaders[key] = value;
+          });
+        }
+        try {
+          Object.defineProperty(data, "_meta", {
+            value: { status: response.status, headers: metaHeaders },
+            enumerable: false,
+            configurable: true,
+            writable: true,
+          });
+        } catch {
+          // frozen objects — skip
+        }
+      }
       emitTelemetry();
-      return result;
+      return data as T;
     }
 
     if (!isRetryable(response.status)) {
@@ -348,6 +410,13 @@ export async function scFetchUrl<T>(
       config.onDebug?.(
         `Retry ${attempt + 1}/${config.maxRetries} after ${Math.round(delayMs)}ms (status ${response.status})`,
       );
+      config.onRetry?.({
+        attempt: retryCount,
+        delayMs,
+        reason: `${response.status} ${response.statusText}`,
+        status: response.status,
+        url,
+      });
       await delay(delayMs);
     }
   }

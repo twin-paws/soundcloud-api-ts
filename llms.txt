@@ -200,6 +200,51 @@ const sc = new SoundCloudClient({
 
 `SCRequestTelemetry`: `{ method, path, durationMs, status, retryCount, error? }` — fires after every request including pagination and retries.
 
+## Raw API
+```ts
+// Call any endpoint — path templating, returns { data, status, headers }
+const res = await sc.raw.get('/tracks/{id}', { id: 123456 });
+await sc.raw.post('/tracks/{id}/comments', { id: 123456, body: { body: 'great track' } });
+await sc.raw.request({ method: 'DELETE', path: '/tracks/{id}', query: { id: 123456 } });
+```
+`RawResponse<T>`: `{ data: T, status: number, headers: Record<string, string> }` — does not throw on non-2xx.
+
+## In-Flight Deduplication & Cache
+```ts
+const sc = new SoundCloudClient({
+  clientId: '...', clientSecret: '...',
+  dedupe: true,       // default: true — concurrent identical GETs share one promise
+  cache: myCache,     // optional: SoundCloudCache interface (get/set/delete)
+  cacheTtlMs: 60000,  // default: 60s per cached GET response
+});
+```
+`SoundCloudCache`: `{ get<T>(key): T|undefined; set<T>(key, value, {ttlMs}): void; delete(key): void }`
+
+## Fetch Injection & Runtime Portability
+```ts
+const sc = new SoundCloudClient({
+  clientId: '...', clientSecret: '...',
+  fetch: customFetch,            // custom fetch implementation
+  AbortController: customAbort,  // custom AbortController
+});
+```
+No Node-only APIs. Works in Cloudflare Workers, Bun, Deno, Edge runtimes.
+
+## Retry Hook
+```ts
+const sc = new SoundCloudClient({
+  clientId: '...', clientSecret: '...',
+  onRetry: (info) => console.warn(`retry #${info.attempt} — ${info.reason} delay=${info.delayMs}ms`),
+});
+```
+`RetryInfo`: `{ attempt, delayMs, reason, status?, url }` — fires on every retry. 429 `Retry-After` header honored (capped 60s).
+
+## OpenAPI Tooling
+```bash
+pnpm openapi:sync      # fetch SoundCloud OpenAPI spec → tools/openapi.json + openapi-operations.json
+pnpm openapi:coverage  # compare spec operations to IMPLEMENTED_OPERATIONS in src/client/registry.ts
+```
+
 ## Full Documentation
 
 https://twin-paws.github.io/soundcloud-api-ts/

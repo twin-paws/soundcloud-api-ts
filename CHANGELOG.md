@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2026-02-26
+
+### Added
+
+- **`sc.raw` — universal escape-hatch request API**: `RawClient` exposes `raw.request({ method, path, query, body })`, plus `raw.get()`, `raw.post()`, `raw.put()`, `raw.delete()` shortcuts. Supports path templating (`/tracks/{id}`). Returns `RawResponse<T>` with `{ data, status, headers }`. Prevents "missing endpoint" from blocking adoption — call any API endpoint immediately.
+- **In-flight GET deduplication**: Concurrent identical GET requests (same URL + auth scope) share a single in-flight promise. Opt-in via `dedupe` constructor option (default: `true`). Eliminates redundant fetches during SSR storms without caching responses.
+- **Pluggable cache interface** (`SoundCloudCache`): Define `get/set/delete` on any backend (in-memory, Redis, KV, etc.) and pass it as `cache` in the constructor. Base package defines types only — no implementation, no deps. Configurable TTL via `cacheTtlMs` (default: 60000ms).
+- **Fetch injection**: Constructor now accepts `fetch` and `AbortController` options for full portability across Node, Bun, Deno, Cloudflare Workers, and Edge runtimes.
+- **Retry hook** (`onRetry`): Fires on every retry attempt with `{ attempt, delayMs, reason, status, url }` — useful for logging, metrics, or alerting on sustained rate limits.
+- **`Retry-After` header respected on 429**: When SoundCloud returns a `Retry-After` header, the client uses it as the retry delay (capped at 60s) instead of the default backoff.
+- **OpenAPI sync tooling** (`tools/openapi-sync.ts`): Fetches SoundCloud's public OpenAPI spec, saves `tools/openapi.json` and `tools/openapi-operations.json`. Run via `pnpm openapi:sync`. Foundation for coverage tracking.
+- **Implemented operations registry** (`src/client/registry.ts`): `IMPLEMENTED_OPERATIONS` string array for CI coverage comparison against the OpenAPI spec.
+- New exports: `RawClient`, `RawResponse`, `SoundCloudCache`, `SoundCloudCacheEntry`, `RetryInfo`, `InFlightDeduper`, `IMPLEMENTED_OPERATIONS`.
+
 ## [1.11.3] - 2026-02-16
 
 ### Fixed

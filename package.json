@@ -1,6 +1,6 @@
 {
   "name": "soundcloud-api-ts",
-  "version": "1.11.3",
+  "version": "1.12.0",
   "description": "TypeScript-first SoundCloud API client for accessing tracks, users, playlists, and search endpoints. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support.",
   "bin": {
     "sc-cli": "./dist/cli.js",
@@ -34,7 +34,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "docs": "typedoc"
+    "docs": "typedoc",
+    "openapi:sync": "npx tsx tools/openapi-sync.ts",
+    "openapi:coverage": "node -e \"const { IMPLEMENTED_OPERATIONS } = require('./dist/index.cjs'); const ops = require('./tools/openapi-operations.json'); const total = ops.length; const covered = ops.filter(o => IMPLEMENTED_OPERATIONS.includes(o.operationId)).length; console.log('Coverage: ' + covered + '/' + total + ' operations (' + Math.round(covered/total*100) + '%)');\" 2>/dev/null || echo 'Run pnpm build and pnpm openapi:sync first'"
   },
   "repository": {
     "type": "git",
