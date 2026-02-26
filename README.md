@@ -181,6 +181,17 @@ await sc.auth.signOut(token.access_token);
 sc.clearToken();
 ```
 
+### Auth at a glance
+
+| Endpoint category | Client Credentials | User Token |
+|---|---|---|
+| tracks, users, search, playlists, resolve | ✅ | ✅ |
+| /me endpoints | ❌ | ✅ |
+| likes, reposts | ❌ | ✅ |
+| create/update/delete | ❌ | ✅ |
+
+See [Auth Guide](docs/auth-guide.md) for full details, token provider patterns, and troubleshooting.
+
 ## Client Class
 
 The `SoundCloudClient` class organizes all endpoints into namespaces. Token is resolved automatically when `setToken()` has been called. Override per-call via `{ token: "..." }` options object.

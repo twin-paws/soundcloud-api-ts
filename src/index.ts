@@ -34,6 +34,7 @@ export type {
 
 // Auth
 export { getClientToken, getUserToken, refreshUserToken, signOut, getAuthorizationUrl, generateCodeVerifier, generateCodeChallenge } from "./auth/index.js";
+export type { TokenProvider, TokenStore } from "./auth/token-provider.js";
 
 // Users
 export { getMe, getUser, getFollowers, getFollowings, getUserTracks, getUserPlaylists, getUserLikesTracks, getUserLikesPlaylists, getUserWebProfiles } from "./users/index.js";
