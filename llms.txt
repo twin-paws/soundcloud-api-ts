@@ -47,6 +47,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
 ### Tracks (sc.tracks)
 
     getTrack(trackId: string | number): Promise<SoundCloudTrack>
+    getTracks(ids: (string | number)[]): Promise<SoundCloudTrack[]>  // batch fetch by IDs
     getStreams(trackId: string | number): Promise<SoundCloudStreams>
     getComments(trackId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudComment>>
     createComment(trackId: string | number, body: string, timestamp?: number): Promise<SoundCloudComment>
@@ -95,6 +96,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     getFollowers(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
     getTracks(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
     getPlaylists(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+    getConnections(): Promise<SoundCloudConnection[]>  // linked social accounts (user token required)
     follow(userUrn: string | number): Promise<void>
     unfollow(userUrn: string | number): Promise<void>
 
@@ -243,6 +245,32 @@ const sc = new SoundCloudClient({
 ```bash
 pnpm openapi:sync      # fetch SoundCloud OpenAPI spec → tools/openapi.json + openapi-operations.json
 pnpm openapi:coverage  # compare spec operations to IMPLEMENTED_OPERATIONS in src/client/registry.ts
+```
+
+## Auth Guide
+Full guide at `docs/auth-guide.md`. Key points:
+- **Client credentials** → public endpoints only (tracks, users, search, playlists, resolve). Cannot access /me, likes, reposts, write operations.
+- **User token (OAuth 2.1 + PKCE)** → required for /me, likes, reposts, create/update/delete.
+- **401 errors**: "invalid_client" = wrong creds; "insufficient_scope" = need user token not client creds; "invalid_token" = expired, refresh needed.
+
+## Token Provider Interfaces
+```ts
+import { TokenProvider, TokenStore } from 'soundcloud-api-ts';
+
+// Implement TokenProvider to plug in any session framework (NextAuth, Clerk, Redis, etc.)
+interface TokenProvider {
+  getAccessToken(): string | undefined | Promise<string | undefined>;
+  setTokens(accessToken: string, refreshToken?: string): void | Promise<void>;
+  refreshIfNeeded(client: SoundCloudClient): Promise<string> | string;
+}
+
+// Simpler synchronous store
+interface TokenStore {
+  getAccessToken(): string | undefined;
+  getRefreshToken(): string | undefined;
+  setTokens(accessToken: string, refreshToken?: string): void;
+  clearTokens(): void;
+}
 ```
 
 ## Related Packages

@@ -316,6 +316,22 @@ interface RetryInfo {
   url: string;
 }
 
+// Token provider interfaces (src/auth/token-provider.ts) — implement to plug in any session framework
+interface TokenProvider {
+  getAccessToken(): string | undefined | Promise<string | undefined>;
+  setTokens(accessToken: string, refreshToken?: string): void | Promise<void>;
+  refreshIfNeeded(client: SoundCloudClient): Promise<string> | string;
+}
+
+interface TokenStore {
+  getAccessToken(): string | undefined;
+  getRefreshToken(): string | undefined;
+  setTokens(accessToken: string, refreshToken?: string): void;
+  clearTokens(): void;
+}
+
+// Auth guide: docs/auth-guide.md — covers all flows, 401 troubleshooting, NextAuth/Clerk bridge patterns
+
 interface SoundCloudCache {
   get<T = unknown>(key: string): Promise<T | undefined> | T | undefined;
   set<T = unknown>(key: string, value: T, options: { ttlMs: number }): Promise<void> | void;
@@ -370,6 +386,7 @@ unfollow(userUrn: string | number, options?: TokenOption): Promise<void>
 getFollowers(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
 getPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 getTracks(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+getConnections(options?: TokenOption): Promise<SoundCloudConnection[]>  // linked social accounts
 ```
 
 #### sc.users
@@ -389,6 +406,7 @@ getWebProfiles(userId: string | number, options?: TokenOption): Promise<SoundClo
 
 ```ts
 getTrack(trackId: string | number, options?: TokenOption): Promise<SoundCloudTrack>
+getTracks(ids: (string | number)[], options?: TokenOption): Promise<SoundCloudTrack[]>  // batch fetch
 getStreams(trackId: string | number, options?: TokenOption): Promise<SoundCloudStreams>
 getComments(trackId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudComment>>
 createComment(trackId: string | number, body: string, timestamp?: number, options?: TokenOption): Promise<SoundCloudComment>
