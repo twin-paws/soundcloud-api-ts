@@ -8,7 +8,7 @@ function makeFetch(response: {
   headers?: Record<string, string>;
 }) {
   const status = response.status ?? 200;
-  const ok = response.ok ?? status >= 200 && status < 300;
+  const ok = response.ok ?? (status >= 200 && status < 300);
   const headersMap = new Map(Object.entries(response.headers ?? {}));
 
   return vi.fn().mockResolvedValue({
