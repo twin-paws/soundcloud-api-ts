@@ -36,7 +36,7 @@
     "test:coverage": "vitest run --coverage",
     "docs": "typedoc",
     "openapi:sync": "npx tsx tools/openapi-sync.ts",
-    "openapi:coverage": "tsx tools/coverage-check.ts"
+    "openapi:coverage": "npx tsx tools/coverage-check.ts"
   },
   "repository": {
     "type": "git",
