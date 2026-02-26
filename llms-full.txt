@@ -749,7 +749,8 @@ Options: --json (raw JSON), --url (play: print URL only), --help
 ```
 
 ## Related packages
-- soundcloud-api-ts-next — React hooks + Next.js API route handlers (built on this package)
+- soundcloud-api-ts-next — React hooks + Next.js API route handlers (built on this package). https://github.com/twin-paws/soundcloud-api-ts-next
+- soundcloud-widget-react — React component for the SoundCloud HTML5 Widget API (embed + playback control). https://github.com/twin-paws/soundcloud-widget-react
 
 ## Links
 - npm: https://www.npmjs.com/package/soundcloud-api-ts

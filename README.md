@@ -589,6 +589,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 ## Related Packages
 
 - **[soundcloud-api-ts-next](https://github.com/twin-paws/soundcloud-api-ts-next)** — React hooks + Next.js API route handlers built on this package. Use it when building Next.js apps that need SoundCloud data with secrets kept server-side.
+- **[soundcloud-widget-react](https://github.com/twin-paws/soundcloud-widget-react)** — React component for the SoundCloud HTML5 Widget API. Embed SoundCloud players and control playback programmatically. Complements this package for full SoundCloud integration.
 
 ## Contributing
 
