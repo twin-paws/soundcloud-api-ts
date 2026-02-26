@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.0] - 2026-02-26
+
+### Added
+
+- **OpenAPI coverage CI** (`tools/coverage-check.ts`): Reports implemented vs total spec operations, writes `tools/coverage-baseline.json`. New CI job uploads coverage artifact on every run. Run locally via `pnpm openapi:coverage`.
+- **Auth guide** (`docs/auth-guide.md`): Comprehensive guide covering client credentials vs user tokens, full PKCE flow, auto-refresh patterns, `TokenProvider`/`TokenStore` interfaces, NextAuth/Clerk bridge examples, and a 401 troubleshooting table.
+- **`TokenProvider` and `TokenStore` interfaces** (`src/auth/token-provider.ts`): Pluggable contracts for token lifecycle management. Implement to integrate with any session framework.
+- **`sc.tracks.getTracks(ids)`**: Fetch multiple tracks by ID array in a single request.
+- **`sc.me.getConnections()`**: List the authenticated user's connected external social accounts.
+- **Auth-at-a-glance table** in README: Shows which endpoint categories require client credentials vs user tokens.
+- README badge linking to OpenAPI coverage tracking.
+
 ## [1.12.0] - 2026-02-26
 
 ### Added
