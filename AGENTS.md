@@ -123,9 +123,14 @@ try {
 
 1. **Token required for ALL requests** — even public endpoints like `getTrack` need at least a client credentials token. Call `setToken()` first.
 2. **User token vs client token** — write operations (like, repost, comment, follow, create/update/delete) require a user token obtained via the authorization code flow. A client credentials token won't work.
-3. **Rate limits exist** — SoundCloud returns 429 when rate limited. The client has built-in retry with exponential backoff (configurable via `maxRetries` and `retryBaseDelay`).
+3. **Rate limits exist** — SoundCloud returns 429 when rate limited. The client has built-in retry with exponential backoff (configurable via `maxRetries` and `retryBaseDelay`). `Retry-After` header is honored (capped 60s).
 4. **Auto token refresh** — pass `onTokenRefresh` in the config to automatically refresh expired tokens on 401.
 5. **Request telemetry** — pass `onRequest` in the config to receive `SCRequestTelemetry` after every request (method, path, duration, status, retries, error). Fires on all paths including pagination and retries.
+6. **sc.raw** — `sc.raw.get('/tracks/{id}', { id: 123456 })` calls any endpoint without a typed wrapper. Returns `RawResponse<T>` with `{ data, status, headers }`. Does NOT throw on non-2xx — check `res.status` yourself. Good for endpoints not yet wrapped.
+7. **Fetch injection** — pass `fetch` and `AbortController` in the constructor for Bun/Deno/Cloudflare Workers portability. No Node-only APIs used at runtime.
+8. **Deduplication** — concurrent identical GETs share a single in-flight promise (`dedupe: true` by default). Prevents redundant fetches in SSR or concurrent component trees.
+9. **Cache** — pass a `SoundCloudCache` implementation in the constructor to cache GET responses. Base package defines the interface only; bring your own backend. `cacheTtlMs` defaults to 60000ms.
+10. **Retry hook** — pass `onRetry` to receive `RetryInfo` on each retry: `{ attempt, delayMs, reason, status?, url }`.
 6. **No env vars** — the package reads no environment variables. Pass `clientId`, `clientSecret`, and `redirectUri` directly to the constructor.
 7. **IDs can be numbers or strings** — all ID parameters accept `string | number`.
 8. **Search pagination** — search uses zero-based `pageNumber` (10 results per page), not cursor-based pagination.

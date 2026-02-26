@@ -297,7 +297,43 @@ interface SoundCloudClientConfig {
   retryBaseDelay?: number;
   onDebug?: (message: string) => void;
   onRequest?: (telemetry: SCRequestTelemetry) => void;
+  // Runtime portability
+  fetch?: typeof globalThis.fetch;
+  AbortController?: typeof globalThis.AbortController;
+  // Deduplication & caching
+  dedupe?: boolean;              // default: true — dedupes concurrent identical GETs
+  cache?: SoundCloudCache;       // optional pluggable cache backend
+  cacheTtlMs?: number;           // default: 60000ms
+  // Retry observability
+  onRetry?: (info: RetryInfo) => void;
 }
+
+interface RetryInfo {
+  attempt: number;
+  delayMs: number;
+  reason: string;
+  status?: number;
+  url: string;
+}
+
+interface SoundCloudCache {
+  get<T = unknown>(key: string): Promise<T | undefined> | T | undefined;
+  set<T = unknown>(key: string, value: T, options: { ttlMs: number }): Promise<void> | void;
+  delete(key: string): Promise<void> | void;
+}
+
+interface RawResponse<T = unknown> {
+  data: T;
+  status: number;
+  headers: Record<string, string>;
+}
+
+// sc.raw — call any endpoint with path templating
+// sc.raw.get('/tracks/{id}', { id: 123456 }) → RawResponse
+// sc.raw.post(path, body?) → RawResponse
+// sc.raw.put(path, body?) → RawResponse
+// sc.raw.delete(path) → RawResponse
+// sc.raw.request({ method, path, query?, body?, token? }) → RawResponse
 
 interface TokenOption {
   token?: string;

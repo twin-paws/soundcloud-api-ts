@@ -267,6 +267,11 @@ sc.search.playlists(query, pageNumber?, options?)
 sc.resolve.resolveUrl(url, options?)
 ```
 
+// Raw escape hatch — call any endpoint
+sc.raw.get('/tracks/{id}', { id: 123456 })
+sc.raw.post('/tracks/{id}/comments', { body: { body: 'great track' } })
+sc.raw.request({ method: 'GET', path: '/me', query: {} })
+
 Where `options` is `{ token?: string }` — only needed to override the stored token.
 
 ## Standalone Functions
@@ -403,21 +408,105 @@ try {
 
 Error messages are parsed directly from SoundCloud's API response format, giving you the most useful message available.
 
+## Raw API — Call Any Endpoint
+
+`sc.raw` is a low-level escape hatch that lets you call any SoundCloud API endpoint — including ones not yet wrapped — while still using your configured auth and fetch.
+
+```ts
+import { SoundCloudClient, type RawResponse } from 'soundcloud-api-ts';
+
+const sc = new SoundCloudClient({ clientId, clientSecret });
+const token = await sc.auth.getClientToken();
+sc.setToken(token.access_token);
+
+// Path templating: {id} is replaced from the params object
+const res: RawResponse = await sc.raw.get('/tracks/{id}', { id: 123456 });
+console.log(res.data);    // parsed JSON body
+console.log(res.status);  // 200
+console.log(res.headers); // response headers
+
+// POST with body
+await sc.raw.post('/tracks/{id}/comments', { id: 123456, body: { body: 'great track', timestamp: 30000 } });
+
+// Fully generic
+await sc.raw.request({ method: 'DELETE', path: '/tracks/{id}', query: { id: 123456 } });
+```
+
+`sc.raw` returns `RawResponse<T = unknown>` — `{ data: T, status: number, headers: Record<string, string> }`. It does **not** throw on non-2xx status codes; check `res.status` yourself.
+
+---
+
+## In-Flight Deduplication & Caching
+
+### GET Coalescing (default on)
+
+When multiple callers fire the same GET request simultaneously (SSR, React StrictMode, concurrent components), only one fetch is made. All callers share the same promise.
+
+```ts
+const sc = new SoundCloudClient({
+  clientId, clientSecret,
+  dedupe: true,  // default — set false to disable
+});
+```
+
+### Pluggable Cache
+
+Bring your own cache backend — in-memory, Redis, Cloudflare KV, whatever. The base package defines the interface only (no implementation, no deps):
+
+```ts
+import { SoundCloudClient, type SoundCloudCache } from 'soundcloud-api-ts';
+
+const myCache: SoundCloudCache = {
+  get: (key) => store.get(key),
+  set: (key, value, { ttlMs }) => store.set(key, value, ttlMs),
+  delete: (key) => store.delete(key),
+};
+
+const sc = new SoundCloudClient({
+  clientId, clientSecret,
+  cache: myCache,
+  cacheTtlMs: 30_000, // 30s default per GET response
+});
+```
+
+---
+
+## Runtime Portability
+
+Pass a custom `fetch` implementation to work in any runtime — Cloudflare Workers, Deno, Bun, or environments without a global `fetch`:
+
+```ts
+const sc = new SoundCloudClient({
+  clientId, clientSecret,
+  fetch: myCustomFetch,          // optional: custom fetch
+  AbortController: myAbortCtrl, // optional: custom AbortController
+});
+```
+
+No Node-only APIs are used at runtime. The client works anywhere `fetch` is available.
+
+---
+
 ## Rate Limiting & Retries
 
 The client automatically retries on **429 Too Many Requests** and **5xx Server Errors** with exponential backoff:
 
 ```ts
+import { SoundCloudClient, type RetryInfo } from 'soundcloud-api-ts';
+
 const sc = new SoundCloudClient({
   clientId: "...",
   clientSecret: "...",
   maxRetries: 3,         // default: 3
   retryBaseDelay: 1000,  // default: 1000ms
   onDebug: (msg) => console.log(msg), // optional retry logging
+  onRetry: (info: RetryInfo) => {
+    console.warn(`[SC] retry #${info.attempt} — ${info.reason} (${info.status}) delay=${info.delayMs}ms url=${info.url}`);
+  },
 });
 ```
 
-- **429 responses** respect the `Retry-After` header when present
+- **429 responses** use the `Retry-After` header value as the delay (capped at 60s)
 - **5xx responses** (500, 502, 503, 504) are retried with exponential backoff
 - **4xx errors** (except 429) are NOT retried — they throw immediately
 - **401 errors** trigger `onTokenRefresh` (if configured) instead of retry
