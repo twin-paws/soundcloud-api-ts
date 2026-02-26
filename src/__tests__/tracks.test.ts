@@ -70,4 +70,19 @@ describe("tracks", () => {
     expect(fn.mock.calls[0][1].method).toBe("DELETE");
     expect(fn.mock.calls[0][0]).toContain("/tracks/1");
   });
+
+  it("getTracks fetches multiple tracks by ids", async () => {
+    const fn = mockFetch({ json: [{ id: 1, title: "A" }, { id: 2, title: "B" }] });
+    const r = await client.tracks.getTracks([1, 2]);
+    expect(fn.mock.calls[0][0]).toContain("/tracks?ids=1,2");
+    expect(r).toHaveLength(2);
+    expect(r[0].title).toBe("A");
+  });
+
+  it("getTracks with single id", async () => {
+    const fn = mockFetch({ json: [{ id: 5, title: "Solo" }] });
+    const r = await client.tracks.getTracks([5]);
+    expect(fn.mock.calls[0][0]).toContain("/tracks?ids=5");
+    expect(r[0].id).toBe(5);
+  });
 });

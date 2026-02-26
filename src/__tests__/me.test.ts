@@ -74,4 +74,11 @@ describe("me", () => {
     expect(fn.mock.calls[0][0]).toContain("/me/followings/123");
     expect(fn.mock.calls[0][1].method).toBe("DELETE");
   });
+
+  it("getConnections calls /me/connections", async () => {
+    const fn = mockFetch({ json: [{ id: 1, service: "twitter", display_name: "myhandle", kind: "connection", created_at: "", uri: "" }] });
+    const r = await client.me.getConnections();
+    expect(fn.mock.calls[0][0]).toContain("/me/connections");
+    expect(r[0].service).toBe("twitter");
+  });
 });

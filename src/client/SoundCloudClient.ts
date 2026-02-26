@@ -13,6 +13,7 @@ import type {
   SoundCloudWebProfile,
   SoundCloudActivitiesResponse,
   SoundCloudPaginatedResponse,
+  SoundCloudConnection,
 } from "../types/api.js";
 import type { UpdateTrackParams } from "../tracks/updateTrack.js";
 import type { CreatePlaylistParams } from "../playlists/createPlaylist.js";
@@ -649,6 +650,28 @@ export namespace SoundCloudClient {
       const t = resolveToken(this.getToken, options?.token);
       return this.fetch({ path: `/me/tracks?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
     }
+
+    /**
+     * List the authenticated user's connected external social accounts.
+     *
+     * @param options - Optional token override
+     * @returns Array of connection objects for linked social services (Twitter, Facebook, etc.)
+     * @throws {SoundCloudError} When the API returns an error
+     *
+     * @remarks This endpoint may require elevated API access or app approval.
+     *
+     * @example
+     * ```ts
+     * const connections = await sc.me.getConnections();
+     * connections.forEach(c => console.log(c.service, c.display_name));
+     * ```
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/me/get_me_connections
+     */
+    async getConnections(options?: TokenOption): Promise<SoundCloudConnection[]> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch<SoundCloudConnection[]>({ path: "/me/connections", method: "GET", token: t });
+    }
   }
 
   /**
@@ -828,6 +851,27 @@ export namespace SoundCloudClient {
     async getTrack(trackId: string | number, options?: TokenOption): Promise<SoundCloudTrack> {
       const t = resolveToken(this.getToken, options?.token);
       return this.fetch<SoundCloudTrack>({ path: `/tracks/${trackId}`, method: "GET", token: t });
+    }
+
+    /**
+     * Fetch multiple tracks by their IDs in a single request.
+     *
+     * @param ids - Array of track IDs (numeric or string URNs)
+     * @param options - Optional token override
+     * @returns Array of track objects (may be shorter than `ids` if some tracks are unavailable)
+     * @throws {SoundCloudError} When the API returns an error
+     *
+     * @example
+     * ```ts
+     * const tracks = await sc.tracks.getTracks([123456, 234567, 345678]);
+     * tracks.forEach(t => console.log(t.title));
+     * ```
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/tracks/get_tracks
+     */
+    async getTracks(ids: (string | number)[], options?: TokenOption): Promise<SoundCloudTrack[]> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch<SoundCloudTrack[]>({ path: `/tracks?ids=${ids.join(",")}`, method: "GET", token: t });
     }
 
     /**

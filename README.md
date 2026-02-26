@@ -11,28 +11,26 @@
 [![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)]()
 [![docs](https://img.shields.io/badge/docs-TypeDoc-blue.svg)](https://twin-paws.github.io/soundcloud-api-ts/)
 [![GitHub stars](https://img.shields.io/github/stars/twin-paws/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-ts)
+[![OpenAPI Coverage](https://img.shields.io/badge/OpenAPI%20coverage-tracked-blue)](tools/coverage-baseline.json)
 
-soundcloud-api-ts is a TypeScript-first SoundCloud API client for accessing tracks, users, playlists, and search endpoints using modern async/await APIs.
-
-Zero dependencies, native `fetch`, built-in OAuth 2.1 + PKCE, automatic retry, and an interactive CLI.
-
-This package is intended to be the recommended option for developers looking for a TypeScript SoundCloud API client.
+The TypeScript SoundCloud API client built on the official API. Zero runtime dependencies, native `fetch`, OAuth 2.1 + PKCE, production-grade retry and deduplication, pluggable cache, raw escape hatch, and an interactive CLI.
 
 ## Why This Package?
 
-Unlike legacy JavaScript SoundCloud SDKs and community wrappers that require separate `@types` packages or scrape undocumented internal APIs, soundcloud-api-ts is:
+Most TypeScript SoundCloud clients fall into one of two categories: unmaintained wrappers that predate OAuth 2.1, or scrapers that harvest undocumented `api-v2` client IDs from browser dev tools and break whenever SoundCloud ships a frontend update. soundcloud-api-ts is neither.
 
-- **TypeScript-first** — full types ship with the package, no community typings required
-- **An API client, not a scraper** — uses SoundCloud's official documented API with registered app credentials
-- **Modern async/await interface** — designed for modern TypeScript projects
-- **Zero dependencies** — uses native `fetch`, nothing to install
-- **Token management built-in** — `setToken()`, auto-refresh on 401
-- **PKCE support** for public clients and SPAs
-- **Interactive CLI** — explore the API from your terminal with `sc-cli`
-- **Clean API** — `sc.tracks.getTrack(id)` not `getTrack(token, id)`
-- **Automatic retry** — exponential backoff on 429 and 5xx
-- **Dual ESM/CJS output** — works everywhere
-- **LLM-friendly** — includes `llms.txt` and `AGENTS.md` for AI coding agents
+It is built on SoundCloud's **official documented API** with registered app credentials, OAuth 2.1 + PKCE, and a production-grade HTTP layer — all with zero runtime dependencies.
+
+- **Official API only** — `api.soundcloud.com` + `secure.soundcloud.com` OAuth. No `api-v2` scraping, no harvested client IDs, no terms violations.
+- **TypeScript-first** — full types ship in the package. No `@types/*` installs, no casting to `any`.
+- **Zero dependencies** — native `fetch`, nothing in `node_modules` at runtime. 4.5 KB min+gz.
+- **Production HTTP layer** — exponential backoff on 429/5xx, `Retry-After` header respected, in-flight GET deduplication, pluggable cache interface, `onRetry` hook.
+- **Runtime portable** — inject your own `fetch` and `AbortController` for Cloudflare Workers, Bun, Deno, and Edge runtimes.
+- **Raw escape hatch** — `sc.raw.get('/any/endpoint/{id}', { id })` calls anything in the spec, not just wrapped endpoints. Never blocked by a missing wrapper.
+- **Full auth support** — client credentials flow for server-to-server, authorization code + PKCE for user-context operations, auto token refresh on 401.
+- **Pagination built-in** — async iterators and `fetchAll` helpers across all paginated endpoints.
+- **Interactive CLI** — `sc-cli tracks <id>`, `sc-cli search <query>`, `sc-cli me` from your terminal.
+- **LLM-friendly** — ships `llms.txt`, `llms-full.txt`, and `AGENTS.md` for AI coding agents.
 
 ## Comparison
 
@@ -40,22 +38,23 @@ Unlike legacy JavaScript SoundCloud SDKs and community wrappers that require sep
 | --- | --- | --- | --- |
 | TypeScript | ✅ Native | ✅ | ✅ |
 | Dependencies | **0** | 1 | 3 (lodash, cookie, undici) |
-| Bundle size (min+gz) | **4.5 KB** | ❌ unbundlable (native binary) | 191 KB |
-| Auth method | **Official OAuth 2.1** | ⚠️ Scrape client ID from browser | ⚠️ Scrape client ID from browser |
+| Bundle size (min+gz) | **4.5 KB** | ❌ unbundlable | 191 KB |
+| Auth method | **Official OAuth 2.1** | ⚠️ Scrapes client ID | ⚠️ Scrapes client ID |
 | PKCE support | ✅ | ❌ | ❌ |
-| Auto token refresh | ✅ on 401 | ❌ | ❌ |
-| Auto retry (429/5xx) | ✅ exponential backoff | ❌ | ❌ |
+| Auto token refresh | ✅ | ❌ | ❌ |
+| Auto retry (429/5xx) | ✅ + Retry-After | ❌ | ❌ |
+| In-flight deduplication | ✅ | ❌ | ❌ |
+| Pluggable cache interface | ✅ | ❌ | ❌ |
+| Fetch injection (Workers/Bun/Deno) | ✅ | ❌ | ❌ |
+| Raw escape hatch | ✅ `sc.raw` | ❌ | ❌ |
 | CLI tool | ✅ `sc-cli` | ❌ | ❌ |
 | Pagination helpers | ✅ async iterators | ❌ | ✅ |
 | Typed errors | ✅ `SoundCloudError` | ❌ | ❌ |
 | Test coverage | **100%** | — | — |
 | API docs site | ✅ [TypeDoc](https://twin-paws.github.io/soundcloud-api-ts/) | ✅ | ❌ |
 | LLM/AI-friendly | ✅ llms.txt + AGENTS.md | ❌ | ❌ |
-| Maintained | ✅ 2026 | ✅ 2025 | ✅ 2026 |
 
-> **Why does auth method matter?** `soundcloud.ts` and `soundcloud-fetch` use SoundCloud's undocumented internal `api-v2` and require you to scrape your client ID from browser dev tools. This can break anytime SoundCloud changes their frontend, and may violate the [API Terms of Use](https://developers.soundcloud.com/docs/api/terms-of-use) which state *"you must register your app"* and *"any attempt to circumvent this and obtain a new client ID and Security Code is strictly prohibited."*
->
-> `soundcloud-api-ts` uses the **official documented API** (`api.soundcloud.com`) with registered app credentials, OAuth 2.1 via `secure.soundcloud.com` as specified by SoundCloud, PKCE for public clients, and automatic token refresh.
+> **Why does auth method matter?** `soundcloud.ts` and `soundcloud-fetch` scrape SoundCloud's undocumented `api-v2` and require harvesting a client ID from browser dev tools. This breaks whenever SoundCloud ships a frontend update, and the [API Terms of Use](https://developers.soundcloud.com/docs/api/terms-of-use) explicitly prohibit it: *"any attempt to circumvent this and obtain a new client ID and Security Code is strictly prohibited."*
 
 **Coming from `soundcloud.ts`?** See the [Migration Guide](docs/MIGRATING.md) — most changes are find-and-replace.
 
@@ -182,6 +181,17 @@ await sc.auth.signOut(token.access_token);
 sc.clearToken();
 ```
 
+### Auth at a glance
+
+| Endpoint category | Client Credentials | User Token |
+|---|---|---|
+| tracks, users, search, playlists, resolve | ✅ | ✅ |
+| /me endpoints | ❌ | ✅ |
+| likes, reposts | ❌ | ✅ |
+| create/update/delete | ❌ | ✅ |
+
+See [Auth Guide](docs/auth-guide.md) for full details, token provider patterns, and troubleshooting.
+
 ## Client Class
 
 The `SoundCloudClient` class organizes all endpoints into namespaces. Token is resolved automatically when `setToken()` has been called. Override per-call via `{ token: "..." }` options object.
@@ -216,6 +226,7 @@ sc.me.unfollow(userUrn, options?)
 sc.me.getFollowers(limit?, options?)
 sc.me.getPlaylists(limit?, options?)
 sc.me.getTracks(limit?, options?)
+sc.me.getConnections(options?)  // connected social accounts; may require app approval
 
 // Users
 sc.users.getUser(userId, options?)
@@ -229,6 +240,7 @@ sc.users.getWebProfiles(userId, options?)
 
 // Tracks
 sc.tracks.getTrack(trackId, options?)
+sc.tracks.getTracks(ids[], options?)  // batch fetch by IDs
 sc.tracks.getStreams(trackId, options?)
 sc.tracks.getComments(trackId, limit?, options?)
 sc.tracks.createComment(trackId, body, timestamp?, options?)

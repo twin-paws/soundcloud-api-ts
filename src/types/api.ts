@@ -470,3 +470,31 @@ export interface SoundCloudPaginatedResponse<T> {
   /** URL to fetch the next page, or null/empty when there are no more pages */
   next_href: string;
 }
+
+/**
+ * A connected external social account linked to the authenticated user's profile.
+ *
+ * @remarks This endpoint may require elevated API access or app approval.
+ * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/me/get_me_connections
+ */
+export interface SoundCloudConnection {
+  /** ISO 8601 timestamp of when the connection was created */
+  created_at: string;
+  /** Unique numeric ID of this connection */
+  id: number;
+  /** Resource type, always "connection" */
+  kind: string;
+  /** Display name for this connection */
+  display_name: string;
+  /**
+   * External service name (e.g. "twitter", "facebook", "instagram",
+   * "youtube", "tumblr", "pinterest", "myspace", "flickr")
+   */
+  service: string;
+  /** API resource URI for this connection */
+  uri: string;
+  /** Whether posts to this service are enabled */
+  post_publish?: boolean;
+  /** Whether favorites to this service are enabled */
+  post_favorite?: boolean;
+}
