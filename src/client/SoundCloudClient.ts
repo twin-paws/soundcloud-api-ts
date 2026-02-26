@@ -1,5 +1,7 @@
-import { scFetch, scFetchUrl, type AutoRefreshContext, type RetryConfig, type SCRequestTelemetry } from "./http.js";
+import { scFetch, scFetchUrl, type AutoRefreshContext, type RetryConfig, type RetryInfo, type SCRequestTelemetry } from "./http.js";
 import { paginate, paginateItems, fetchAll } from "./paginate.js";
+import { RawClient } from "./raw.js";
+import type { SoundCloudCache } from "./cache.js";
 import type {
   SoundCloudToken,
   SoundCloudUser,
@@ -39,6 +41,16 @@ export interface SoundCloudClientConfig {
   onDebug?: (message: string) => void;
   /** Called after every API request with structured telemetry (timing, status, retries) */
   onRequest?: (telemetry: SCRequestTelemetry) => void;
+  /** Custom fetch implementation (defaults to `globalThis.fetch`) */
+  fetch?: typeof globalThis.fetch;
+  /** Deduplicate concurrent identical requests (default: true) */
+  dedupe?: boolean;
+  /** Optional cache backend for API responses */
+  cache?: SoundCloudCache;
+  /** Default TTL in milliseconds for cached responses (default: 60000) */
+  cacheTtlMs?: number;
+  /** Called before each retry attempt with structured retry info */
+  onRetry?: (info: RetryInfo) => void;
 }
 
 /**
@@ -114,6 +126,8 @@ export class SoundCloudClient {
   public likes: SoundCloudClient.Likes;
   /** Repost/unrepost actions (/reposts) */
   public reposts: SoundCloudClient.Reposts;
+  /** Low-level raw HTTP client — returns status/headers without throwing on non-2xx */
+  public raw: RawClient;
 
   /**
    * Creates a new SoundCloudClient instance.
@@ -127,6 +141,7 @@ export class SoundCloudClient {
       maxRetries: config.maxRetries ?? 3,
       retryBaseDelay: config.retryBaseDelay ?? 1000,
       onDebug: config.onDebug,
+      onRetry: config.onRetry,
     };
     const refreshCtx: AutoRefreshContext = config.onTokenRefresh
       ? {
@@ -155,6 +170,7 @@ export class SoundCloudClient {
     this.resolve = new SoundCloudClient.Resolve(getToken, refreshCtx!);
     this.likes = new SoundCloudClient.Likes(getToken, refreshCtx!);
     this.reposts = new SoundCloudClient.Reposts(getToken, refreshCtx!);
+    this.raw = new RawClient("https://api.soundcloud.com", getToken, config.fetch ?? globalThis.fetch);
   }
 
   /**
