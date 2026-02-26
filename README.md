@@ -11,7 +11,7 @@
 [![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)]()
 [![docs](https://img.shields.io/badge/docs-TypeDoc-blue.svg)](https://twin-paws.github.io/soundcloud-api-ts/)
 [![GitHub stars](https://img.shields.io/github/stars/twin-paws/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-ts)
-[![OpenAPI Coverage](https://img.shields.io/badge/OpenAPI%20coverage-tracked-blue)](https://github.com/twin-paws/soundcloud-api-ts/actions/workflows/ci.yml)
+[![Endpoints](https://img.shields.io/badge/endpoints-51%20wrapped-blue)](https://github.com/twin-paws/soundcloud-api-ts/blob/main/src/client/registry.ts)
 
 The TypeScript SoundCloud API client built on the official API. Zero runtime dependencies, native `fetch`, OAuth 2.1 + PKCE, production-grade retry and deduplication, pluggable cache, raw escape hatch, and an interactive CLI.
 
