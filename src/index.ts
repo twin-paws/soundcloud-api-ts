@@ -30,6 +30,7 @@ export type {
   SoundCloudActivity,
   SoundCloudActivitiesResponse,
   SoundCloudPaginatedResponse,
+  SoundCloudConnection,
 } from "./types/api.js";
 
 // Auth
@@ -40,7 +41,7 @@ export type { TokenProvider, TokenStore } from "./auth/token-provider.js";
 export { getMe, getUser, getFollowers, getFollowings, getUserTracks, getUserPlaylists, getUserLikesTracks, getUserLikesPlaylists, getUserWebProfiles } from "./users/index.js";
 
 // Tracks
-export { getTrack, getTrackComments, createTrackComment, getTrackLikes, getTrackReposts, getRelatedTracks, getTrackStreams, likeTrack, unlikeTrack, updateTrack, deleteTrack } from "./tracks/index.js";
+export { getTrack, getTracks, getTrackComments, createTrackComment, getTrackLikes, getTrackReposts, getRelatedTracks, getTrackStreams, likeTrack, unlikeTrack, updateTrack, deleteTrack } from "./tracks/index.js";
 export type { UpdateTrackParams } from "./tracks/index.js";
 
 // Playlists
@@ -54,7 +55,7 @@ export { searchTracks, searchUsers, searchPlaylists } from "./search/index.js";
 export { resolveUrl } from "./resolve/index.js";
 
 // Me (authenticated user endpoints)
-export { getMeActivities, getMeActivitiesOwn, getMeActivitiesTracks, getMeLikesTracks, getMeLikesPlaylists, getMeFollowings, getMeFollowingsTracks, followUser, unfollowUser, getMeFollowers, getMePlaylists, getMeTracks } from "./me/index.js";
+export { getMeActivities, getMeActivitiesOwn, getMeActivitiesTracks, getMeLikesTracks, getMeLikesPlaylists, getMeFollowings, getMeFollowingsTracks, followUser, unfollowUser, getMeFollowers, getMePlaylists, getMeTracks, getMeConnections } from "./me/index.js";
 
 // Likes (likeTrack/unlikeTrack already exported from tracks)
 export { likePlaylist, unlikePlaylist } from "./likes/index.js";

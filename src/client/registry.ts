@@ -21,6 +21,7 @@ export const IMPLEMENTED_OPERATIONS: string[] = [
   "get_me_followers",
   "get_me_playlists",
   "get_me_tracks",
+  "get_me_connections",
 
   // Users
   "get_users_user_id",

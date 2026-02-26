@@ -226,6 +226,7 @@ sc.me.unfollow(userUrn, options?)
 sc.me.getFollowers(limit?, options?)
 sc.me.getPlaylists(limit?, options?)
 sc.me.getTracks(limit?, options?)
+sc.me.getConnections(options?)  // connected social accounts; may require app approval
 
 // Users
 sc.users.getUser(userId, options?)
@@ -239,6 +240,7 @@ sc.users.getWebProfiles(userId, options?)
 
 // Tracks
 sc.tracks.getTrack(trackId, options?)
+sc.tracks.getTracks(ids[], options?)  // batch fetch by IDs
 sc.tracks.getStreams(trackId, options?)
 sc.tracks.getComments(trackId, limit?, options?)
 sc.tracks.createComment(trackId, body, timestamp?, options?)

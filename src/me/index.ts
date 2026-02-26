@@ -4,3 +4,4 @@ export { getMeFollowings, getMeFollowingsTracks, followUser, unfollowUser } from
 export { getMeFollowers } from "./followers.js";
 export { getMePlaylists } from "./playlists.js";
 export { getMeTracks } from "./tracks.js";
+export { getMeConnections } from "./connections.js";

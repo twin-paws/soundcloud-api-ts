@@ -1,4 +1,5 @@
 export { getTrack } from "./getTrack.js";
+export { getTracks } from "./getTracks.js";
 export { getTrackComments } from "./getComments.js";
 export { createTrackComment } from "./createComment.js";
 export { getTrackLikes } from "./getLikes.js";
