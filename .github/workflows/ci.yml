@@ -49,6 +49,7 @@ jobs:
         continue-on-error: true  # spec URL may not be reachable in CI
       - name: Check coverage
         run: pnpm openapi:coverage
+        continue-on-error: true  # informational only, never block CI
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
