@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-02-26
+
+### Fixed
+
+- **`refreshUserToken` Basic Auth**: Both the standalone `refreshUserToken()` function and `sc.auth.refreshUserToken()` now send client credentials via `Authorization: Basic` header instead of form body params, matching the pattern used by `getClientToken` (OAuth 2.1 consistency).
+- **`getTracks` 200-ID limit guard**: Passing more than 200 IDs to `getTracks` now throws immediately with a descriptive error (`"getTracks: SoundCloud API supports a maximum of 200 IDs per request"`) before making any network request. JSDoc `@remarks` note added to document the limit.
+- **Cross-runtime base64 helper** (`src/utils/base64.ts`): New `toBase64()` utility uses `Buffer.from` when available (Node.js, Bun) and falls back to the WHATWG `btoa` global for edge/browser runtimes. All Basic Auth encoding in `getClientToken`, `refreshUserToken`, and `SoundCloudClient.Auth` now uses this helper.
+
 ## [1.13.0] - 2026-02-26
 
 ### Added

@@ -18,6 +18,7 @@ import type {
 import type { UpdateTrackParams } from "../tracks/updateTrack.js";
 import type { CreatePlaylistParams } from "../playlists/createPlaylist.js";
 import type { UpdatePlaylistParams } from "../playlists/updatePlaylist.js";
+import { toBase64 } from "../utils/base64.js";
 
 /**
  * Configuration options for creating a {@link SoundCloudClient} instance.
@@ -321,9 +322,7 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
      */
     async getClientToken(): Promise<SoundCloudToken> {
-      const basicAuth = Buffer.from(
-        `${this.config.clientId}:${this.config.clientSecret}`,
-      ).toString("base64");
+      const basicAuth = toBase64(`${this.config.clientId}:${this.config.clientSecret}`);
       return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
@@ -384,13 +383,15 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
      */
     async refreshUserToken(refreshToken: string): Promise<SoundCloudToken> {
+      const basicAuth = toBase64(`${this.config.clientId}:${this.config.clientSecret}`);
       return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
+        headers: {
+          Authorization: `Basic ${basicAuth}`,
+        },
         body: new URLSearchParams({
           grant_type: "refresh_token",
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
           redirect_uri: this.config.redirectUri!,
           refresh_token: refreshToken,
         }),
@@ -860,6 +861,11 @@ export namespace SoundCloudClient {
      * @param options - Optional token override
      * @returns Array of track objects (may be shorter than `ids` if some tracks are unavailable)
      * @throws {SoundCloudError} When the API returns an error
+     * @throws {Error} When more than 200 IDs are provided
+     *
+     * @remarks
+     * SoundCloud's API likely caps at ~200 IDs per request. Passing more than 200 IDs
+     * will throw immediately without making a network request.
      *
      * @example
      * ```ts
@@ -870,6 +876,9 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/tracks/get_tracks
      */
     async getTracks(ids: (string | number)[], options?: TokenOption): Promise<SoundCloudTrack[]> {
+      if (ids.length > 200) {
+        throw new Error("getTracks: SoundCloud API supports a maximum of 200 IDs per request");
+      }
       const t = resolveToken(this.getToken, options?.token);
       return this.fetch<SoundCloudTrack[]>({ path: `/tracks?ids=${ids.join(",")}`, method: "GET", token: t });
     }

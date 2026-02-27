@@ -8,6 +8,11 @@ import type { SoundCloudTrack } from "../types/api.js";
  * @param ids - Array of track IDs (numeric or string URNs)
  * @returns Array of track objects (may be shorter than `ids` if some tracks are unavailable)
  * @throws {SoundCloudError} When the API returns an error
+ * @throws {Error} When more than 200 IDs are provided
+ *
+ * @remarks
+ * SoundCloud's API likely caps at ~200 IDs per request. Passing more than 200 IDs
+ * will throw immediately without making a network request.
  *
  * @example
  * ```ts
@@ -22,9 +27,13 @@ import type { SoundCloudTrack } from "../types/api.js";
 export const getTracks = (
   token: string,
   ids: (string | number)[],
-): Promise<SoundCloudTrack[]> =>
-  scFetch<SoundCloudTrack[]>({
+): Promise<SoundCloudTrack[]> => {
+  if (ids.length > 200) {
+    throw new Error("getTracks: SoundCloud API supports a maximum of 200 IDs per request");
+  }
+  return scFetch<SoundCloudTrack[]>({
     path: `/tracks?ids=${ids.join(",")}`,
     method: "GET",
     token,
   });
+};

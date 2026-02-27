@@ -85,4 +85,11 @@ describe("tracks", () => {
     expect(fn.mock.calls[0][0]).toContain("/tracks?ids=5");
     expect(r[0].id).toBe(5);
   });
+
+  it("getTracks throws when more than 200 ids are provided", async () => {
+    const ids = Array.from({ length: 201 }, (_, i) => i + 1);
+    await expect(client.tracks.getTracks(ids)).rejects.toThrow(
+      "getTracks: SoundCloud API supports a maximum of 200 IDs per request",
+    );
+  });
 });
