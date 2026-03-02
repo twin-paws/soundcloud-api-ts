@@ -1,6 +1,5 @@
 import { scFetch } from "../client/http.js";
 import type { SoundCloudToken } from "../types/api.js";
-import { toBase64 } from "../utils/base64.js";
 
 /**
  * Exchange client credentials for an access token (client_credentials grant).
@@ -23,15 +22,13 @@ import { toBase64 } from "../utils/base64.js";
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
  */
 export const getClientToken = (clientId: string, clientSecret: string): Promise<SoundCloudToken> => {
-  const basicAuth = toBase64(`${clientId}:${clientSecret}`);
   return scFetch<SoundCloudToken>({
     path: "/oauth/token",
     method: "POST",
-    headers: {
-      Authorization: `Basic ${basicAuth}`,
-    },
     body: new URLSearchParams({
       grant_type: "client_credentials",
+      client_id: clientId,
+      client_secret: clientSecret,
     }),
   });
 };

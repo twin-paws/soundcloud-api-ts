@@ -1,6 +1,5 @@
 import { scFetch } from "../client/http.js";
 import type { SoundCloudToken } from "../types/api.js";
-import { toBase64 } from "../utils/base64.js";
 
 /**
  * Refresh an expired access token using a refresh token (refresh_token grant).
@@ -35,15 +34,13 @@ export const refreshUserToken = (
   redirectUri: string,
   refreshToken: string,
 ): Promise<SoundCloudToken> => {
-  const basicAuth = toBase64(`${clientId}:${clientSecret}`);
   return scFetch<SoundCloudToken>({
     path: "/oauth/token",
     method: "POST",
-    headers: {
-      Authorization: `Basic ${basicAuth}`,
-    },
     body: new URLSearchParams({
       grant_type: "refresh_token",
+      client_id: clientId,
+      client_secret: clientSecret,
       redirect_uri: redirectUri,
       refresh_token: refreshToken,
     }),
