@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.13.1
+# soundcloud-api-ts v1.13.2
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -39,6 +39,8 @@ const track = await sc.tracks.getTrack(123456);
 All standalone functions require a token as the first parameter.
 
 ### Auth
+
+> **v1.13.2+**: `getClientToken` and `refreshUserToken` send credentials in the request body (not `Authorization: Basic`). SoundCloud rejects Basic Auth on `/oauth/token` for all grant types.
 
 ```ts
 function getClientToken(clientId: string, clientSecret: string): Promise<SoundCloudToken>
@@ -369,6 +371,8 @@ getUserToken(code: string, codeVerifier?: string): Promise<SoundCloudToken>
 refreshUserToken(refreshToken: string): Promise<SoundCloudToken>
 signOut(accessToken: string): Promise<void>
 ```
+
+> **v1.13.2+**: All token requests use body credentials (`client_id` + `client_secret` in form body). SoundCloud rejects `Authorization: Basic` on `/oauth/token` for all grant types as of early 2026.
 
 #### sc.me
 

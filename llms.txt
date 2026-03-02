@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.13.1
+# soundcloud-api-ts v1.13.2
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -38,6 +38,8 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     getUserToken(code: string, codeVerifier?: string): Promise<SoundCloudToken>
     refreshUserToken(refreshToken: string): Promise<SoundCloudToken>
     signOut(accessToken: string): Promise<void>
+
+> **Note (v1.13.2+)**: All token endpoints (`client_credentials`, `refresh_token`, `authorization_code`) send `client_id` and `client_secret` in the request body, not via `Authorization: Basic`. SoundCloud rejects Basic Auth on `/oauth/token` with 403/400 as of early 2026.
 
 ### PKCE Helpers (standalone exports)
 

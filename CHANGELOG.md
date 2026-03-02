@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.2] - 2026-03-02
+
+### Fixed
+
+- **OAuth body credentials for all token grants**: SoundCloud's `/oauth/token` endpoint now rejects `Authorization: Basic` headers for all grant types, returning `403 Forbidden` for `client_credentials` and `400 invalid_request` for `refresh_token`. All four token methods now send `client_id` and `client_secret` in the request body instead:
+  - Standalone `getClientToken(clientId, clientSecret)`
+  - Standalone `refreshUserToken(clientId, clientSecret, redirectUri, refreshToken)`
+  - `SoundCloudClient.auth.getClientToken()`
+  - `SoundCloudClient.auth.refreshUserToken(refreshToken)`
+- **Removed unused `toBase64` import** from auth modules (`getClientToken.ts`, `refreshUserToken.ts`, `SoundCloudClient.ts`).
+
+> **Upgrading from 1.13.x**: This is a drop-in replacement. No API changes — only the wire format of the token request changes. If you were working around the Basic Auth rejection in your own code, you can remove that workaround.
+
 ## [1.13.1] - 2026-02-26
 
 ### Fixed
