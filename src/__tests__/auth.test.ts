@@ -7,17 +7,21 @@ const config = { clientId: "cid", clientSecret: "csecret", redirectUri: "http://
 beforeEach(() => { vi.restoreAllMocks(); });
 
 describe("auth", () => {
-  it("getClientToken sends body credentials and client_credentials grant", async () => {
+  it("getClientToken uses Basic Auth header and client_credentials grant (SC OAuth 2.1)", async () => {
+    // SC OAuth 2.1: client_credentials grant requires Authorization: Basic header.
+    // client_id/client_secret in request body is no longer supported for this grant.
     const fn = mockFetch({ json: { access_token: "tok", token_type: "bearer" } });
     const client = new SoundCloudClient(config);
     const result = await client.auth.getClientToken();
     expect(result.access_token).toBe("tok");
     const headers = fn.mock.calls[0][1].headers;
-    expect(headers?.Authorization).toBeUndefined();
+    // Basic base64("cid:csecret")
+    expect(headers?.Authorization).toBe(`Basic ${Buffer.from("cid:csecret").toString("base64")}`);
     const body = fn.mock.calls[0][1].body as URLSearchParams;
     expect(body.get("grant_type")).toBe("client_credentials");
-    expect(body.get("client_id")).toBe("cid");
-    expect(body.get("client_secret")).toBe("csecret");
+    // client_id and client_secret must NOT be in the body
+    expect(body.get("client_id")).toBeNull();
+    expect(body.get("client_secret")).toBeNull();
   });
 
   it("getUserToken sends code", async () => {
