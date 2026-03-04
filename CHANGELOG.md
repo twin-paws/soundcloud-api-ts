@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.4] - 2026-03-04
+
+### Fixed
+
+- **Standalone `getClientToken()` Basic Auth**: The standalone `getClientToken(clientId, clientSecret)` function was missed in 1.13.3 and was still sending credentials in the body. Now uses `Authorization: Basic` header matching `SoundCloudClient.auth.getClientToken()`.
+
 ## [1.13.3] - 2026-03-04
 
 ### Fixed
