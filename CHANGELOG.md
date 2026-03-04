@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.3] - 2026-03-04
+
+### Fixed
+
+- **`client_credentials` grant now uses Basic Auth (SC OAuth 2.1)**: SoundCloud dropped support for `client_id`/`client_secret` in the request body specifically for the `client_credentials` grant type. Both `getClientToken()` (standalone) and `SoundCloudClient.auth.getClientToken()` now send `Authorization: Basic base64(client_id:client_secret)` as a header with only `grant_type=client_credentials` in the body.
+- **`refresh_token` grant unchanged**: The `refreshUserToken()` standalone and `SoundCloudClient.auth.refreshUserToken()` continue to send credentials in the request body — SC still accepts this for the `refresh_token` grant.
+
+> **Note**: This reverses part of the 1.13.2 change. SC appears to have different requirements per grant type: `client_credentials` requires Basic Auth; `refresh_token` accepts body params. If you were seeing `401 invalid_client` errors on token refresh since ~March 2026, this is the fix.
+
+> **Upgrading from 1.13.2**: Drop-in replacement. No API signature changes.
+
 ## [1.13.2] - 2026-03-02
 
 ### Fixed

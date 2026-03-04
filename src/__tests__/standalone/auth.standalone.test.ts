@@ -18,6 +18,17 @@ describe("getClientToken", () => {
     const url = fn.mock.calls[0][0] as string;
     expect(url).toBe("https://secure.soundcloud.com/oauth/token");
   });
+
+  it("sends Basic Auth header (SC OAuth 2.1 — body credentials dropped for client_credentials grant)", async () => {
+    const fn = mockFetch({ json: { access_token: "tok", token_type: "bearer" } });
+    await getClientToken("cid", "csecret");
+    const headers = fn.mock.calls[0][1].headers as Record<string, string>;
+    expect(headers.Authorization).toBe(`Basic ${Buffer.from("cid:csecret").toString("base64")}`);
+    const body = fn.mock.calls[0][1].body as URLSearchParams;
+    expect(body.get("grant_type")).toBe("client_credentials");
+    expect(body.get("client_id")).toBeNull();
+    expect(body.get("client_secret")).toBeNull();
+  });
 });
 
 describe("getUserToken", () => {

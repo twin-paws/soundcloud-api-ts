@@ -22,13 +22,17 @@ import type { SoundCloudToken } from "../types/api.js";
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
  */
 export const getClientToken = (clientId: string, clientSecret: string): Promise<SoundCloudToken> => {
+  // SC OAuth 2.1: client_credentials grant requires Basic Auth header.
+  // Sending client_id/client_secret in the request body is no longer accepted
+  // for this grant type and returns 401 invalid_client.
+  // The refresh_token grant is unaffected and continues to use body params.
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   return scFetch<SoundCloudToken>({
     path: "/oauth/token",
     method: "POST",
+    headers: { Authorization: `Basic ${credentials}` },
     body: new URLSearchParams({
       grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
     }),
   });
 };
