@@ -321,13 +321,17 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
      */
     async getClientToken(): Promise<SoundCloudToken> {
+      // SC OAuth 2.1: client_credentials grant ONLY supports Basic Auth header.
+      // Sending client_id/client_secret in the request body is no longer accepted
+      // and will return 401 invalid_client.
+      // See: https://developers.soundcloud.com/docs/api/guide#client-creds
+      const credentials = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString("base64");
       return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
+        headers: { Authorization: `Basic ${credentials}` },
         body: new URLSearchParams({
           grant_type: "client_credentials",
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
         }),
       });
     }
