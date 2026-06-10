@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.13.2
+# soundcloud-api-ts v1.13.5
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -49,7 +49,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
 ### Tracks (sc.tracks)
 
     getTrack(trackId: string | number): Promise<SoundCloudTrack>
-    getTracks(ids: (string | number)[]): Promise<SoundCloudTrack[]>  // batch fetch by IDs
+    getTracks(ids: (string | number)[]): Promise<SoundCloudTrack[]>  // batch fetch by IDs; max 200 (throws above)
     getStreams(trackId: string | number): Promise<SoundCloudStreams>
     getComments(trackId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudComment>>
     createComment(trackId: string | number, body: string, timestamp?: number): Promise<SoundCloudComment>
@@ -202,7 +202,7 @@ const sc = new SoundCloudClient({
 });
 ```
 
-`SCRequestTelemetry`: `{ method, path, durationMs, status, retryCount, error? }` — fires after every request including pagination and retries.
+`SCRequestTelemetry`: `{ method, path, durationMs, status, retryCount, error? }` — fires after every client-namespace request including pagination and retries. Not emitted for `sc.raw.*` or `auth.signOut`.
 
 ## Raw API
 ```ts
@@ -223,16 +223,16 @@ const sc = new SoundCloudClient({
 });
 ```
 `SoundCloudCache`: `{ get<T>(key): T|undefined; set<T>(key, value, {ttlMs}): void; delete(key): void }`
+Applies to GETs made through the client namespaces. `sc.raw.*` and pagination `next_href` fetches are not deduped/cached. (Note: these options existed but were not wired up in v1.12.0–v1.13.4.)
 
 ## Fetch Injection & Runtime Portability
 ```ts
 const sc = new SoundCloudClient({
   clientId: '...', clientSecret: '...',
-  fetch: customFetch,            // custom fetch implementation
-  AbortController: customAbort,  // custom AbortController
+  fetch: customFetch,  // custom fetch implementation (defaults to globalThis.fetch)
 });
 ```
-No Node-only APIs. Works in Cloudflare Workers, Bun, Deno, Edge runtimes.
+No Node-only APIs. Works in Cloudflare Workers, Bun, Deno, Edge runtimes. There is no `AbortController` config option — pass a pre-wired `fetch` if you need cancellation/timeouts.
 
 ## Retry Hook
 ```ts

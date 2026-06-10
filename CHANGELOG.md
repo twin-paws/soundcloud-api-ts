@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.5] - 2026-06-10
+
+### Fixed
+
+- **`dedupe`, `cache`, `cacheTtlMs`, and `fetch` config options are now actually wired up.** Since 1.12.0 these options were accepted by `SoundCloudClientConfig` (and documented as working) but silently ignored — `fetch` only reached `sc.raw`. Now: concurrent identical namespace GETs share one in-flight promise (`dedupe`, default `true`), a configured `SoundCloudCache` is consulted/populated for namespace GETs (`cacheTtlMs` default 60000), and an injected `fetch` is used by all namespace methods, `sc.auth.*`, `signOut`, and pagination `next_href` fetches. `sc.raw.*` and pagination continuations are not deduped/cached.
+- **`sc.auth.*` honors retry config**: `maxRetries`, `retryBaseDelay`, `onRetry`, and `onDebug` now apply to token-endpoint calls (previously hardcoded defaults).
+- **Cross-runtime base64 restored in `getClientToken`**: the 1.13.3 Basic Auth fix used `Buffer.from` directly in both the class method and the standalone function, breaking edge/browser runtimes (no `Buffer`). Both now use the `toBase64` helper again (introduced in 1.13.1 for exactly this). Wire format unchanged.
+- **Clear error for missing `redirectUri`**: `sc.auth.getUserToken()` and `sc.auth.refreshUserToken()` now throw `"redirectUri is required for …"` before any network call instead of sending the literal string `redirect_uri=undefined`.
+- **CLI**: `sc-cli login` now opens the browser correctly on Windows (`start "" "<url>"` — the URL was previously consumed as a window title).
+
+### Removed
+
+- **`AbortController` config option removed from all documentation.** It was documented in 1.12.0 but never existed in `SoundCloudClientConfig` and never had an implementation; the documented example did not typecheck. Inject a `fetch` with cancellation baked in if needed.
+
+### Documentation
+
+- README/AGENTS.md/llms.txt/llms-full.txt corrected against source: stale `v1.13.2` headers in llms files, Node badge (≥22 → ≥20, matching `engines`), README Quick Start no longer calls `/me` with a client-credentials token, telemetry coverage scoped (`sc.raw`/`signOut` excluded), `getTracks` 200-ID limit noted everywhere the method is listed.
+- Full audit report: `docs/audit-2026-06.md`.
+
 ## [1.13.4] - 2026-03-04
 
 ### Fixed
@@ -68,6 +87,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **OpenAPI sync tooling** (`tools/openapi-sync.ts`): Fetches SoundCloud's public OpenAPI spec, saves `tools/openapi.json` and `tools/openapi-operations.json`. Run via `pnpm openapi:sync`. Foundation for coverage tracking.
 - **Implemented operations registry** (`src/client/registry.ts`): `IMPLEMENTED_OPERATIONS` string array for CI coverage comparison against the OpenAPI spec.
 - New exports: `RawClient`, `RawResponse`, `SoundCloudCache`, `SoundCloudCacheEntry`, `RetryInfo`, `InFlightDeduper`, `IMPLEMENTED_OPERATIONS`.
+
+> **Correction (2026-06-10)**: The `dedupe`, `cache`/`cacheTtlMs`, and `fetch` options described above were added to the config type and documented in this release, but were **not wired into the request path** — `fetch` only affected `sc.raw`, and dedupe/cache were no-ops. They became functional in **1.13.5**. The `AbortController` option never existed in the config type at all.
 
 ## [1.11.3] - 2026-02-16
 

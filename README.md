@@ -7,7 +7,7 @@
 [![bundle size](https://img.shields.io/bundlephobia/minzip/soundcloud-api-ts)](https://bundlephobia.com/package/soundcloud-api-ts)
 [![install size](https://packagephobia.com/badge?p=soundcloud-api-ts)](https://packagephobia.com/result?p=soundcloud-api-ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-blue.svg)](https://www.typescriptlang.org/)
-[![Node](https://img.shields.io/badge/Node.js-≥22-339933.svg)](https://nodejs.org/)
+[![Node](https://img.shields.io/badge/Node.js-≥20-339933.svg)](https://nodejs.org/)
 [![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)]()
 [![docs](https://img.shields.io/badge/docs-TypeDoc-blue.svg)](https://twin-paws.github.io/soundcloud-api-ts/)
 [![GitHub stars](https://img.shields.io/github/stars/twin-paws/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-ts)
@@ -25,11 +25,11 @@ It is built on SoundCloud's **official documented API** with registered app cred
 - **TypeScript-first** — full types ship in the package. No `@types/*` installs, no casting to `any`.
 - **Zero dependencies** — native `fetch`, nothing in `node_modules` at runtime. 4.5 KB min+gz.
 - **Production HTTP layer** — exponential backoff on 429/5xx, `Retry-After` header respected, in-flight GET deduplication, pluggable cache interface, `onRetry` hook.
-- **Runtime portable** — inject your own `fetch` and `AbortController` for Cloudflare Workers, Bun, Deno, and Edge runtimes.
+- **Runtime portable** — inject your own `fetch` for Cloudflare Workers, Bun, Deno, and Edge runtimes.
 - **Raw escape hatch** — `sc.raw.get('/any/endpoint/{id}', { id })` calls anything in the spec, not just wrapped endpoints. Never blocked by a missing wrapper.
 - **Full auth support** — client credentials flow for server-to-server, authorization code + PKCE for user-context operations, auto token refresh on 401.
 - **Pagination built-in** — async iterators and `fetchAll` helpers across all paginated endpoints.
-- **Interactive CLI** — `sc-cli tracks <id>`, `sc-cli search <query>`, `sc-cli me` from your terminal.
+- **Interactive CLI** — `sc-cli track <id>`, `sc-cli search <query>`, `sc-cli me` from your terminal.
 - **LLM-friendly** — ships `llms.txt`, `llms-full.txt`, and `AGENTS.md` for AI coding agents.
 
 ## Comparison
@@ -131,9 +131,11 @@ sc.setToken(token.access_token);
 
 // Now all calls use the stored token automatically
 const results = await sc.search.tracks("electronic");
-const me = await sc.me.getMe();
 const track = await sc.tracks.getTrack(123456);
 const streams = await sc.tracks.getStreams(123456);
+
+// /me endpoints need a user token (authorization code flow), not a client token:
+// const me = await sc.me.getMe();
 ```
 
 ## OAuth 2.1 Flow
@@ -240,7 +242,7 @@ sc.users.getWebProfiles(userId, options?)
 
 // Tracks
 sc.tracks.getTrack(trackId, options?)
-sc.tracks.getTracks(ids[], options?)  // batch fetch by IDs
+sc.tracks.getTracks(ids[], options?)  // batch fetch by IDs (max 200, throws above)
 sc.tracks.getStreams(trackId, options?)
 sc.tracks.getComments(trackId, limit?, options?)
 sc.tracks.createComment(trackId, body, timestamp?, options?)
@@ -277,12 +279,12 @@ sc.search.playlists(query, pageNumber?, options?)
 
 // Resolve
 sc.resolve.resolveUrl(url, options?)
-```
 
 // Raw escape hatch — call any endpoint
 sc.raw.get('/tracks/{id}', { id: 123456 })
 sc.raw.post('/tracks/{id}/comments', { body: { body: 'great track' } })
 sc.raw.request({ method: 'GET', path: '/me', query: {} })
+```
 
 Where `options` is `{ token?: string }` — only needed to override the stored token.
 
@@ -461,6 +463,10 @@ const sc = new SoundCloudClient({
 });
 ```
 
+Dedupe and cache apply to GETs made through the client namespaces (`sc.tracks.*`, `sc.users.*`, …). `sc.raw.*` and pagination `next_href` continuation fetches are not deduped or cached.
+
+> **Note:** the `dedupe`, `cache`, and `cacheTtlMs` options were accepted but not actually wired up in v1.12.0–v1.13.4 — they take effect from v1.13.5.
+
 ### Pluggable Cache
 
 Bring your own cache backend — in-memory, Redis, Cloudflare KV, whatever. The base package defines the interface only (no implementation, no deps):
@@ -490,12 +496,11 @@ Pass a custom `fetch` implementation to work in any runtime — Cloudflare Worke
 ```ts
 const sc = new SoundCloudClient({
   clientId, clientSecret,
-  fetch: myCustomFetch,          // optional: custom fetch
-  AbortController: myAbortCtrl, // optional: custom AbortController
+  fetch: myCustomFetch, // optional: custom fetch (defaults to globalThis.fetch)
 });
 ```
 
-No Node-only APIs are used at runtime. The client works anywhere `fetch` is available.
+No Node-only APIs are used at runtime. The client works anywhere `fetch` is available. There is no `AbortController` option — if you need cancellation or timeouts, wrap them into the `fetch` you inject.
 
 ---
 
@@ -551,7 +556,7 @@ The `SCRequestTelemetry` object includes:
 | `retryCount` | `number` | Number of retries (0 = first attempt succeeded) |
 | `error` | `string?` | Error message if the request failed |
 
-Telemetry fires on every code path: direct calls, pagination, retries, and 401 token refresh. It's fully optional — zero overhead when `onRequest` is not set.
+Telemetry fires for all client-namespace requests: direct calls, pagination, retries, and 401 token refresh. It is **not** emitted for `sc.raw.*` or `auth.signOut`. Fully optional — zero overhead when `onRequest` is not set.
 
 ## API Terms Compliance
 

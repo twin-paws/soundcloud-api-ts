@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.13.2
+# soundcloud-api-ts v1.13.5
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -301,8 +301,8 @@ interface SoundCloudClientConfig {
   onRequest?: (telemetry: SCRequestTelemetry) => void;
   // Runtime portability
   fetch?: typeof globalThis.fetch;
-  AbortController?: typeof globalThis.AbortController;
-  // Deduplication & caching
+  // Deduplication & caching (GET requests via client namespaces; sc.raw and
+  // pagination next_href fetches are not deduped/cached)
   dedupe?: boolean;              // default: true — dedupes concurrent identical GETs
   cache?: SoundCloudCache;       // optional pluggable cache backend
   cacheTtlMs?: number;           // default: 60000ms
@@ -410,7 +410,7 @@ getWebProfiles(userId: string | number, options?: TokenOption): Promise<SoundClo
 
 ```ts
 getTrack(trackId: string | number, options?: TokenOption): Promise<SoundCloudTrack>
-getTracks(ids: (string | number)[], options?: TokenOption): Promise<SoundCloudTrack[]>  // batch fetch
+getTracks(ids: (string | number)[], options?: TokenOption): Promise<SoundCloudTrack[]>  // batch fetch; max 200 IDs (throws above)
 getStreams(trackId: string | number, options?: TokenOption): Promise<SoundCloudStreams>
 getComments(trackId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudComment>>
 createComment(trackId: string | number, body: string, timestamp?: number, options?: TokenOption): Promise<SoundCloudComment>
