@@ -375,11 +375,12 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
      */
     async getUserToken(code: string, codeVerifier?: string): Promise<SoundCloudToken> {
+      if (!this.config.redirectUri) throw new Error("redirectUri is required for getUserToken");
       const params: Record<string, string> = {
         grant_type: "authorization_code",
         client_id: this.config.clientId,
         client_secret: this.config.clientSecret,
-        redirect_uri: this.config.redirectUri!,
+        redirect_uri: this.config.redirectUri,
         code,
       };
       if (codeVerifier) params.code_verifier = codeVerifier;
@@ -406,6 +407,7 @@ export namespace SoundCloudClient {
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
      */
     async refreshUserToken(refreshToken: string): Promise<SoundCloudToken> {
+      if (!this.config.redirectUri) throw new Error("redirectUri is required for refreshUserToken");
       return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
@@ -413,7 +415,7 @@ export namespace SoundCloudClient {
           grant_type: "refresh_token",
           client_id: this.config.clientId,
           client_secret: this.config.clientSecret,
-          redirect_uri: this.config.redirectUri!,
+          redirect_uri: this.config.redirectUri,
           refresh_token: refreshToken,
         }),
       });

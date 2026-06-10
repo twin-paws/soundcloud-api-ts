@@ -105,6 +105,7 @@ describe("Telemetry (onRequest)", () => {
     const client = new SoundCloudClient({
       clientId: "cid",
       clientSecret: "cs",
+      redirectUri: "http://localhost/callback",
       onRequest,
     });
     mockFetch({ status: 200, json: { access_token: "newtok", refresh_token: "newrt" } });

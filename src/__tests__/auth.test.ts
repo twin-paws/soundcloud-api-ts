@@ -24,13 +24,20 @@ describe("auth", () => {
     expect(body.get("client_secret")).toBeNull();
   });
 
-  it("getUserToken sends code", async () => {
+  it("getUserToken sends body credentials and no Basic Auth header", async () => {
+    // SC OAuth 2.1: authorization_code grant takes client_id/client_secret in
+    // the form body (same as refresh_token; only client_credentials uses Basic).
     const fn = mockFetch({ json: { access_token: "tok" } });
     const client = new SoundCloudClient(config);
     await client.auth.getUserToken("mycode");
+    const headers = fn.mock.calls[0][1].headers;
+    expect(headers?.Authorization).toBeUndefined();
     const body = fn.mock.calls[0][1].body as URLSearchParams;
     expect(body.get("grant_type")).toBe("authorization_code");
     expect(body.get("code")).toBe("mycode");
+    expect(body.get("client_id")).toBe("cid");
+    expect(body.get("client_secret")).toBe("csecret");
+    expect(body.get("redirect_uri")).toBe("http://localhost/callback");
   });
 
   it("getUserToken sends optional codeVerifier", async () => {
@@ -88,5 +95,19 @@ describe("auth", () => {
   it("getAuthorizationUrl throws without redirectUri", () => {
     const client = new SoundCloudClient({ clientId: "cid", clientSecret: "cs" });
     expect(() => client.auth.getAuthorizationUrl()).toThrow("redirectUri is required");
+  });
+
+  it("getUserToken throws without redirectUri instead of sending redirect_uri=undefined", async () => {
+    const fn = mockFetch({ json: { access_token: "tok" } });
+    const client = new SoundCloudClient({ clientId: "cid", clientSecret: "cs" });
+    await expect(client.auth.getUserToken("mycode")).rejects.toThrow("redirectUri is required");
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("refreshUserToken throws without redirectUri instead of sending redirect_uri=undefined", async () => {
+    const fn = mockFetch({ json: { access_token: "tok" } });
+    const client = new SoundCloudClient({ clientId: "cid", clientSecret: "cs" });
+    await expect(client.auth.refreshUserToken("rt")).rejects.toThrow("redirectUri is required");
+    expect(fn).not.toHaveBeenCalled();
   });
 });
