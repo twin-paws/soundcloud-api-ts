@@ -219,10 +219,14 @@ async function cmdLogin(): Promise<void> {
   console.log(`  ${col(c.blue, authUrl)}\n`);
 
   // Try to open browser automatically
-  const openCmd = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+  // cmd.exe `start` treats the first quoted arg as a window title, so pass an empty title
+  const openCmd =
+    process.platform === "darwin" ? `open "${authUrl}"`
+    : process.platform === "win32" ? `start "" "${authUrl}"`
+    : `xdg-open "${authUrl}"`;
   try {
     const { exec: cpExec } = await import("node:child_process");
-    cpExec(`${openCmd} "${authUrl}"`);
+    cpExec(openCmd);
   } catch {
     // ignore — user can open manually
   }

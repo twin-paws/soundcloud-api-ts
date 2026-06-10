@@ -22,13 +22,6 @@ function makeFetch(response: {
   });
 }
 
-function makeClient(fetchFn = makeFetch({})) {
-  return {
-    client: new RawClient("https://api.soundcloud.com", () => "test-token", fetchFn as unknown as typeof fetch),
-    fetchFn,
-  };
-}
-
 beforeEach(() => { vi.restoreAllMocks(); });
 
 describe("RawClient.request — path templating", () => {
