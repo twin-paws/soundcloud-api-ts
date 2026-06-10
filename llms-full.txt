@@ -40,7 +40,7 @@ All standalone functions require a token as the first parameter.
 
 ### Auth
 
-> **v1.13.2+**: `getClientToken` and `refreshUserToken` send credentials in the request body (not `Authorization: Basic`). SoundCloud rejects Basic Auth on `/oauth/token` for all grant types.
+> **v1.13.3+**: Wire format differs per grant type. `getClientToken` (`client_credentials`) sends `Authorization: Basic` — body credentials return `401 invalid_client`. `refreshUserToken` (`refresh_token`) sends `client_id`/`client_secret` in the request body — SoundCloud rejects Basic Auth for this grant.
 
 ```ts
 function getClientToken(clientId: string, clientSecret: string): Promise<SoundCloudToken>
@@ -372,7 +372,7 @@ refreshUserToken(refreshToken: string): Promise<SoundCloudToken>
 signOut(accessToken: string): Promise<void>
 ```
 
-> **v1.13.2+**: All token requests use body credentials (`client_id` + `client_secret` in form body). SoundCloud rejects `Authorization: Basic` on `/oauth/token` for all grant types as of early 2026.
+> **v1.13.3+**: Token request wire format is per grant type: `client_credentials` → `Authorization: Basic` header (body credentials rejected with `401 invalid_client`); `refresh_token` / `authorization_code` → `client_id` + `client_secret` in the form body (Basic Auth rejected). Do not generalize one grant's requirements to the others.
 
 #### sc.me
 

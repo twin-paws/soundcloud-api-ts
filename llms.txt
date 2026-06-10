@@ -39,7 +39,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     refreshUserToken(refreshToken: string): Promise<SoundCloudToken>
     signOut(accessToken: string): Promise<void>
 
-> **Note (v1.13.2+)**: All token endpoints (`client_credentials`, `refresh_token`, `authorization_code`) send `client_id` and `client_secret` in the request body, not via `Authorization: Basic`. SoundCloud rejects Basic Auth on `/oauth/token` with 403/400 as of early 2026.
+> **Note (v1.13.3+)**: SoundCloud's `/oauth/token` requirements differ **per grant type**: `client_credentials` requires `Authorization: Basic` (body credentials return `401 invalid_client`), while `refresh_token` and `authorization_code` require `client_id`/`client_secret` in the request body. `getClientToken` sends Basic Auth; `refreshUserToken`/`getUserToken` send body credentials. (v1.13.2 briefly used body credentials for all grants — reversed for `client_credentials` in v1.13.3.)
 
 ### PKCE Helpers (standalone exports)
 
