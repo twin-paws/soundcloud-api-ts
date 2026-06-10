@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mockFetch } from "../helpers.js";
 import { getTrack } from "../../tracks/getTrack.js";
+import { getTracks } from "../../tracks/getTracks.js";
 import { getTrackStreams } from "../../tracks/getStreams.js";
 import { getTrackComments } from "../../tracks/getComments.js";
 import { createTrackComment } from "../../tracks/createComment.js";
@@ -20,6 +21,24 @@ describe("getTrack", () => {
     const t = await getTrack("tok", 1);
     expect(t.title).toBe("Song");
     expect(fn.mock.calls[0][0]).toContain("/tracks/1");
+  });
+});
+
+describe("getTracks (batch)", () => {
+  it("fetches multiple tracks by ids in one request", async () => {
+    const fn = mockFetch({ json: [{ id: 1 }, { id: 2 }] });
+    const tracks = await getTracks("tok", [1, 2]);
+    expect(tracks.length).toBe(2);
+    expect(fn.mock.calls[0][0]).toContain("/tracks?ids=1,2");
+  });
+
+  it("throws when more than 200 ids are provided, before any network call", async () => {
+    const fn = mockFetch({ json: [] });
+    const ids = Array.from({ length: 201 }, (_, i) => i + 1);
+    expect(() => getTracks("tok", ids)).toThrow(
+      "getTracks: SoundCloud API supports a maximum of 200 IDs per request",
+    );
+    expect(fn).not.toHaveBeenCalled();
   });
 });
 

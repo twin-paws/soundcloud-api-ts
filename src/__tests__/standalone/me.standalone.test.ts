@@ -6,10 +6,20 @@ import { getMeFollowings, getMeFollowingsTracks, followUser, unfollowUser } from
 import { getMeFollowers } from "../../me/followers.js";
 import { getMePlaylists } from "../../me/playlists.js";
 import { getMeTracks } from "../../me/tracks.js";
+import { getMeConnections } from "../../me/connections.js";
 
 beforeEach(() => { vi.restoreAllMocks(); });
 
 const paginated = { collection: [], next_href: null };
+
+describe("getMeConnections", () => {
+  it("fetches connected social accounts", async () => {
+    const fn = mockFetch({ json: [{ id: 1, service: "twitter" }] });
+    const conns = await getMeConnections("tok");
+    expect(conns[0].service).toBe("twitter");
+    expect(fn.mock.calls[0][0]).toContain("/me/connections");
+  });
+});
 
 describe("getMeActivities", () => {
   it("fetches activities", async () => {

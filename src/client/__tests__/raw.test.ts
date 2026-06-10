@@ -109,6 +109,21 @@ describe("RawClient.request — response shape", () => {
     expect(res.data).toEqual({ error: "not found" });
   });
 
+  it("returns undefined data when the body is not valid JSON", async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      json: vi.fn().mockRejectedValue(new SyntaxError("Unexpected token")),
+      headers: { get: () => null, forEach: () => {} },
+    });
+    const client = new RawClient("https://api.soundcloud.com", () => "tok", fetchFn as unknown as typeof fetch);
+
+    const res = await client.request({ method: "GET", path: "/tracks/1" });
+
+    expect(res.status).toBe(200);
+    expect(res.data).toBeUndefined();
+  });
+
   it("uses explicit token over getToken", async () => {
     const fetchFn = makeFetch({ json: {} });
     const client = new RawClient("https://api.soundcloud.com", () => "stored-token", fetchFn as unknown as typeof fetch);

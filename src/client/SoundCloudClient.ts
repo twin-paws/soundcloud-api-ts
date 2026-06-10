@@ -283,8 +283,8 @@ export namespace SoundCloudClient {
     private fetch<T>(opts: Parameters<typeof scFetch>[0]) {
       // No onTokenRefresh here: a 401 from the token endpoint itself must throw, not recurse.
       const ctx: AutoRefreshContext = {
-        getToken: () => undefined,
-        setToken: () => {},
+        getToken: /* v8 ignore next */ () => undefined,
+        setToken: /* v8 ignore next */ () => {},
         retry: {
           maxRetries: this.config.maxRetries ?? 3,
           retryBaseDelay: this.config.retryBaseDelay ?? 1000,
