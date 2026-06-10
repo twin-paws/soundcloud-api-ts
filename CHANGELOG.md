@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.13.5] - 2026-06-10
+## [1.14.0] - 2026-06-10
 
 ### Fixed
 
@@ -88,7 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Implemented operations registry** (`src/client/registry.ts`): `IMPLEMENTED_OPERATIONS` string array for CI coverage comparison against the OpenAPI spec.
 - New exports: `RawClient`, `RawResponse`, `SoundCloudCache`, `SoundCloudCacheEntry`, `RetryInfo`, `InFlightDeduper`, `IMPLEMENTED_OPERATIONS`.
 
-> **Correction (2026-06-10)**: The `dedupe`, `cache`/`cacheTtlMs`, and `fetch` options described above were added to the config type and documented in this release, but were **not wired into the request path** — `fetch` only affected `sc.raw`, and dedupe/cache were no-ops. They became functional in **1.13.5**. The `AbortController` option never existed in the config type at all.
+> **Correction (2026-06-10)**: The `dedupe`, `cache`/`cacheTtlMs`, and `fetch` options described above were added to the config type and documented in this release, but were **not wired into the request path** — `fetch` only affected `sc.raw`, and dedupe/cache were no-ops. They became functional in **1.14.0**. The `AbortController` option never existed in the config type at all.
 
 ## [1.11.3] - 2026-02-16
 

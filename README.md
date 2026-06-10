@@ -465,7 +465,7 @@ const sc = new SoundCloudClient({
 
 Dedupe and cache apply to GETs made through the client namespaces (`sc.tracks.*`, `sc.users.*`, …). `sc.raw.*` and pagination `next_href` continuation fetches are not deduped or cached.
 
-> **Note:** the `dedupe`, `cache`, and `cacheTtlMs` options were accepted but not actually wired up in v1.12.0–v1.13.4 — they take effect from v1.13.5.
+> **Note:** the `dedupe`, `cache`, and `cacheTtlMs` options were accepted but not actually wired up in v1.12.0–v1.13.4 — they take effect from v1.14.0.
 
 ### Pluggable Cache
 
