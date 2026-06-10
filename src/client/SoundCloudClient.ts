@@ -2,6 +2,7 @@ import { scFetch, scFetchUrl, type AutoRefreshContext, type RetryConfig, type Re
 import { toBase64 } from "../utils/base64.js";
 import { paginate, paginateItems, fetchAll } from "./paginate.js";
 import { RawClient } from "./raw.js";
+import { InFlightDeduper } from "./dedupe.js";
 import type { SoundCloudCache } from "./cache.js";
 import type {
   SoundCloudToken,
@@ -45,11 +46,11 @@ export interface SoundCloudClientConfig {
   onRequest?: (telemetry: SCRequestTelemetry) => void;
   /** Custom fetch implementation (defaults to `globalThis.fetch`) */
   fetch?: typeof globalThis.fetch;
-  /** Deduplicate concurrent identical requests (default: true) */
+  /** Deduplicate concurrent identical GET requests (default: true) */
   dedupe?: boolean;
-  /** Optional cache backend for API responses */
+  /** Optional cache backend for GET responses */
   cache?: SoundCloudCache;
-  /** Default TTL in milliseconds for cached responses (default: 60000) */
+  /** Default TTL in milliseconds for cached GET responses (default: 60000) */
   cacheTtlMs?: number;
   /** Called before each retry attempt with structured retry info */
   onRetry?: (info: RetryInfo) => void;
@@ -145,6 +146,14 @@ export class SoundCloudClient {
       onDebug: config.onDebug,
       onRetry: config.onRetry,
     };
+    const sharedCtx = {
+      retry: retryConfig,
+      onRequest: config.onRequest,
+      fetchImpl: config.fetch,
+      deduper: (config.dedupe ?? true) ? new InFlightDeduper() : undefined,
+      cache: config.cache,
+      cacheTtlMs: config.cacheTtlMs,
+    };
     const refreshCtx: AutoRefreshContext = config.onTokenRefresh
       ? {
           getToken,
@@ -153,14 +162,12 @@ export class SoundCloudClient {
             return result;
           },
           setToken: (a, r) => this.setToken(a, r),
-          retry: retryConfig,
-          onRequest: config.onRequest,
+          ...sharedCtx,
         }
       : {
           getToken,
           setToken: /* v8 ignore next */ (a, r) => this.setToken(a, r),
-          retry: retryConfig,
-          onRequest: config.onRequest,
+          ...sharedCtx,
         };
 
     this.auth = new SoundCloudClient.Auth(this.config);
@@ -218,7 +225,7 @@ export class SoundCloudClient {
   paginate<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>): AsyncGenerator<T[], void, undefined> {
     const token = this._accessToken;
     const onReq = this.config.onRequest;
-    return paginate(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq));
+    return paginate(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq, this.config.fetch));
   }
 
   /**
@@ -237,7 +244,7 @@ export class SoundCloudClient {
   paginateItems<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>): AsyncGenerator<T, void, undefined> {
     const token = this._accessToken;
     const onReq = this.config.onRequest;
-    return paginateItems(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq));
+    return paginateItems(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq, this.config.fetch));
   }
 
   /**
@@ -257,7 +264,7 @@ export class SoundCloudClient {
   fetchAll<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>, options?: { maxItems?: number }): Promise<T[]> {
     const token = this._accessToken;
     const onReq = this.config.onRequest;
-    return fetchAll(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq), options);
+    return fetchAll(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq, this.config.fetch), options);
   }
 }
 
@@ -273,7 +280,21 @@ export namespace SoundCloudClient {
    */
   export class Auth {
     constructor(private config: SoundCloudClientConfig) {}
-    private fetch<T>(opts: Parameters<typeof scFetch>[0]) { return scFetch<T>(opts, undefined, this.config.onRequest); }
+    private fetch<T>(opts: Parameters<typeof scFetch>[0]) {
+      // No onTokenRefresh here: a 401 from the token endpoint itself must throw, not recurse.
+      const ctx: AutoRefreshContext = {
+        getToken: () => undefined,
+        setToken: () => {},
+        retry: {
+          maxRetries: this.config.maxRetries ?? 3,
+          retryBaseDelay: this.config.retryBaseDelay ?? 1000,
+          onDebug: this.config.onDebug,
+          onRetry: this.config.onRetry,
+        },
+        fetchImpl: this.config.fetch,
+      };
+      return scFetch<T>(opts, ctx, this.config.onRequest);
+    }
 
     /**
      * Build the authorization URL to redirect users to SoundCloud's OAuth login page.
@@ -414,7 +435,8 @@ export namespace SoundCloudClient {
      * ```
      */
     async signOut(accessToken: string): Promise<void> {
-      const res = await fetch("https://secure.soundcloud.com/sign-out", {
+      const fetchFn = this.config.fetch ?? fetch;
+      const res = await fetchFn("https://secure.soundcloud.com/sign-out", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ access_token: accessToken }),

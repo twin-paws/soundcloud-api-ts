@@ -1,4 +1,6 @@
 import { SoundCloudError, type SoundCloudErrorBody } from "../errors.js";
+import type { InFlightDeduper } from "./dedupe.js";
+import type { SoundCloudCache } from "./cache.js";
 
 const BASE_URL = "https://api.soundcloud.com";
 const AUTH_BASE_URL = "https://secure.soundcloud.com";
@@ -84,7 +86,17 @@ export interface AutoRefreshContext {
   retry?: RetryConfig;
   /** Called after every API request with structured telemetry */
   onRequest?: (telemetry: SCRequestTelemetry) => void;
+  /** Custom fetch implementation (defaults to `globalThis.fetch`) */
+  fetchImpl?: typeof globalThis.fetch;
+  /** Deduplicates concurrent identical GET requests when set */
+  deduper?: InFlightDeduper;
+  /** Optional cache backend for GET responses */
+  cache?: SoundCloudCache;
+  /** TTL in milliseconds for cached GET responses (default: 60000) */
+  cacheTtlMs?: number;
 }
+
+const DEFAULT_CACHE_TTL_MS = 60000;
 
 const DEFAULT_RETRY: RetryConfig = { maxRetries: 3, retryBaseDelay: 1000 };
 
@@ -157,6 +169,32 @@ export async function scFetch<T>(
   refreshCtx?: AutoRefreshContext,
   onRequest?: (telemetry: SCRequestTelemetry) => void,
 ): Promise<T> {
+  const deduper = refreshCtx?.deduper;
+  const cache = refreshCtx?.cache;
+  if (options.method !== "GET" || (!deduper && !cache)) {
+    return scFetchCore(options, refreshCtx, onRequest);
+  }
+
+  const key = `GET ${options.path} ${options.token ?? ""}`;
+  const run = async (): Promise<T> => {
+    if (cache) {
+      const hit = await cache.get<T>(key);
+      if (hit !== undefined) return hit;
+    }
+    const result = await scFetchCore<T>(options, refreshCtx, onRequest);
+    if (cache && result !== undefined) {
+      await cache.set(key, result, { ttlMs: refreshCtx?.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS });
+    }
+    return result;
+  };
+  return deduper ? deduper.add(key, run) : run();
+}
+
+async function scFetchCore<T>(
+  options: RequestOptions,
+  refreshCtx?: AutoRefreshContext,
+  onRequest?: (telemetry: SCRequestTelemetry) => void,
+): Promise<T> {
   const retryConfig = refreshCtx?.retry ?? DEFAULT_RETRY;
   const telemetryCallback = onRequest ?? refreshCtx?.onRequest;
   const startTime = Date.now();
@@ -204,9 +242,10 @@ export async function scFetch<T>(
     }
 
     let lastResponse: Awaited<ReturnType<typeof fetch>> | undefined;
+    const fetchFn = refreshCtx?.fetchImpl ?? fetch;
 
     for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
-      const response = await fetch(url, {
+      const response = await fetchFn(url, {
         method: options.method,
         headers,
         body: fetchBody,
@@ -330,6 +369,7 @@ export async function scFetchUrl<T>(
   token?: string,
   retryConfig?: RetryConfig,
   onRequest?: (telemetry: SCRequestTelemetry) => void,
+  fetchImpl?: typeof globalThis.fetch,
 ): Promise<T> {
   const config = retryConfig ?? DEFAULT_RETRY;
   const headers: Record<string, string> = { Accept: "application/json" };
@@ -352,9 +392,10 @@ export async function scFetchUrl<T>(
   };
 
   let lastResponse: Awaited<ReturnType<typeof fetch>> | undefined;
+  const fetchFn = fetchImpl ?? fetch;
 
   for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
-    const response = await fetch(url, { method: "GET", headers, redirect: "manual" });
+    const response = await fetchFn(url, { method: "GET", headers, redirect: "manual" });
 
     finalStatus = response.status;
 
