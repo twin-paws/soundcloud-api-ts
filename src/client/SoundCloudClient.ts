@@ -1,4 +1,5 @@
 import { scFetch, scFetchUrl, type AutoRefreshContext, type RetryConfig, type RetryInfo, type SCRequestTelemetry } from "./http.js";
+import { toBase64 } from "../utils/base64.js";
 import { paginate, paginateItems, fetchAll } from "./paginate.js";
 import { RawClient } from "./raw.js";
 import type { SoundCloudCache } from "./cache.js";
@@ -325,7 +326,7 @@ export namespace SoundCloudClient {
       // Sending client_id/client_secret in the request body is no longer accepted
       // and will return 401 invalid_client.
       // See: https://developers.soundcloud.com/docs/api/guide#client-creds
-      const credentials = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString("base64");
+      const credentials = toBase64(`${this.config.clientId}:${this.config.clientSecret}`);
       return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",

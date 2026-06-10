@@ -1,4 +1,5 @@
 import { scFetch } from "../client/http.js";
+import { toBase64 } from "../utils/base64.js";
 import type { SoundCloudToken } from "../types/api.js";
 
 /**
@@ -26,7 +27,7 @@ export const getClientToken = (clientId: string, clientSecret: string): Promise<
   // Sending client_id/client_secret in the request body is no longer accepted
   // for this grant type and returns 401 invalid_client.
   // The refresh_token grant is unaffected and continues to use body params.
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+  const credentials = toBase64(`${clientId}:${clientSecret}`);
   return scFetch<SoundCloudToken>({
     path: "/oauth/token",
     method: "POST",
