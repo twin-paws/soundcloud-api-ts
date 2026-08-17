@@ -24,7 +24,7 @@ It is built on SoundCloud's **official documented API** with registered app cred
 - **Official API only** — `api.soundcloud.com` + `secure.soundcloud.com` OAuth. No `api-v2` scraping, no harvested client IDs, no terms violations.
 - **TypeScript-first** — full types ship in the package. No `@types/*` installs, no casting to `any`.
 - **Zero dependencies** — native `fetch`, nothing in `node_modules` at runtime. 4.5 KB min+gz.
-- **Production HTTP layer** — exponential backoff on 429/5xx, `Retry-After` header respected, in-flight GET deduplication, pluggable cache interface, `onRetry` hook.
+- **Production HTTP layer** — exponential backoff on 429/5xx and thrown `fetch` (network/DNS), `Retry-After` header respected, in-flight GET deduplication, pluggable cache interface, `onRetry` hook.
 - **Runtime portable** — inject your own `fetch` for Cloudflare Workers, Bun, Deno, and Edge runtimes.
 - **Raw escape hatch** — `sc.raw.get('/any/endpoint/{id}', { id })` calls anything in the spec, not just wrapped endpoints. Never blocked by a missing wrapper.
 - **Full auth support** — client credentials flow for server-to-server, authorization code + PKCE for user-context operations, auto token refresh on 401.
@@ -202,7 +202,7 @@ The `SoundCloudClient` class organizes all endpoints into namespaces. Token is r
 const sc = new SoundCloudClient({ clientId, clientSecret, redirectUri });
 
 // Token management
-sc.setToken(accessToken, refreshToken?)
+sc.setToken(accessToken, refreshToken?) // one arg clears any stored refresh token
 sc.clearToken()
 sc.accessToken   // getter
 sc.refreshToken  // getter
@@ -405,7 +405,9 @@ try {
     console.log(err.status);     // 404
     console.log(err.statusText); // "Not Found"
     console.log(err.message);    // "404 - Not Found" (from SC's response)
-    console.log(err.errorCode);  // "invalid_client" (on auth errors)
+    console.log(err.errorCode);  // "invalid_client" / "invalid_grant" (error_code or OAuth error)
+    console.log(err.isInvalidGrant); // refresh token is dead
+    console.log(err.isPermanentAuthError); // user must reconnect
     console.log(err.errors);     // ["404 - Not Found"] (individual error messages)
     console.log(err.docsLink);   // "https://developers.soundcloud.com/docs/api/explorer/open-api"
     console.log(err.body);       // full parsed response body
@@ -463,7 +465,7 @@ const sc = new SoundCloudClient({
 });
 ```
 
-Dedupe and cache apply to GETs made through the client namespaces (`sc.tracks.*`, `sc.users.*`, …). `sc.raw.*` and pagination `next_href` continuation fetches are not deduped or cached.
+Dedupe and cache apply to GETs made through the client namespaces (`sc.tracks.*`, `sc.users.*`, …). `sc.raw.*` is not deduped or cached. Pagination `next_href` is not deduped/cached but uses the live token, client retry config, and `onTokenRefresh`. Cache keys hash the access token (SHA-256) so a Redis/KV backend never stores the raw secret.
 
 > **Note:** the `dedupe`, `cache`, and `cacheTtlMs` options were accepted but not actually wired up in v1.12.0–v1.13.4 — they take effect from v1.14.0.
 
@@ -506,7 +508,7 @@ No Node-only APIs are used at runtime. The client works anywhere `fetch` is avai
 
 ## Rate Limiting & Retries
 
-The client automatically retries on **429 Too Many Requests** and **5xx Server Errors** with exponential backoff:
+The client automatically retries on **429 Too Many Requests**, **5xx Server Errors**, and **thrown `fetch`** (network/DNS) with exponential backoff:
 
 ```ts
 import { SoundCloudClient, type RetryInfo } from 'soundcloud-api-ts';
@@ -525,8 +527,10 @@ const sc = new SoundCloudClient({
 
 - **429 responses** use the `Retry-After` header value as the delay (capped at 60s)
 - **5xx responses** (500, 502, 503, 504) are retried with exponential backoff
+- **Thrown `fetch`** (network/DNS) is retried with the same backoff, then rethrown
 - **4xx errors** (except 429) are NOT retried — they throw immediately
-- **401 errors** trigger `onTokenRefresh` (if configured) instead of retry
+- **401 errors** trigger a single-flight `onTokenRefresh` (if configured) instead of retry — namespace methods and pagination `next_href`
+- A **200 with invalid JSON** throws `SoundCloudError`, not a raw `SyntaxError`
 - Backoff formula: `baseDelay × 2^attempt` with jitter
 
 ## Request Telemetry

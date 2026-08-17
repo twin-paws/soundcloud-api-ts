@@ -97,7 +97,7 @@ Access tokens expire. There are two ways to handle this.
 
 ### Auto-refresh via onTokenRefresh
 
-Pass `onTokenRefresh` in the constructor. It fires automatically when any request returns `401`. The new tokens are applied to the client and the original request is retried transparently.
+Pass `onTokenRefresh` in the constructor. It fires automatically when any request returns `401` (namespace methods and pagination `next_href`). Concurrent 401s share a single in-flight refresh so a rotated refresh token is not burned. Persist the **new** refresh token atomically in that callback — SoundCloud rotates it on every refresh, and losing it ends the session. The new tokens are applied to the client and the original request is retried transparently.
 
 ```ts
 const sc = new SoundCloudClient({
@@ -262,11 +262,13 @@ console.log(res.status, res.data);
 
 | `errorCode` | Meaning | Fix |
 |---|---|---|
-| `invalid_client` | Wrong `clientId`/`clientSecret`, or Basic Auth not being sent | Check credentials. Client credentials flow sends Basic Auth header — verify your app credentials in the SoundCloud developer portal. |
+| `invalid_client` | Wrong `clientId`/`clientSecret`, or Basic Auth not being sent | Check credentials. Client credentials flow sends Basic Auth header — verify your app credentials in the SoundCloud developer portal. **Not** `isPermanentAuthError` — SC sometimes returns this as a transient 401. |
 | `invalid_token` | Access token is expired or malformed | Refresh the token via `auth.refreshUserToken(refreshToken)` or obtain a new one. |
 | `insufficient_scope` | The endpoint requires a user token but a client credentials token was provided | Use the authorization code flow to get a user token. |
 | `unauthorized_client` | Your app is not approved for this grant type | Check your app settings in the SoundCloud developer portal. Some grant types require explicit approval. |
-| `invalid_grant` | Refresh token is expired or already used | Start a new authorization flow; the user must re-authorize. |
+| `invalid_grant` | Refresh token is expired or already used | Start a new authorization flow; the user must re-authorize. `err.isInvalidGrant === true`. |
+
+`errorCode` is taken from `error_code` or, if that is absent, the OAuth `error` field (the shape `/oauth/token` actually returns).
 
 ### Checking `err.errorCode` in code
 
@@ -278,8 +280,10 @@ try {
 } catch (err) {
   if (err instanceof SoundCloudError) {
     console.log(err.status);      // 401
-    console.log(err.errorCode);   // "insufficient_scope"
+    console.log(err.errorCode);   // "insufficient_scope" (from body.error or body.error_code)
     console.log(err.isUnauthorized); // true
+    console.log(err.isInvalidGrant); // true only for invalid_grant
+    console.log(err.isPermanentAuthError); // user must reconnect
   }
 }
 ```

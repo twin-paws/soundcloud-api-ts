@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.1] - 2026-08-16
+
+### Fixed
+
+- **Package `exports` / `main` / `module` now match tsup output.** `require` and `main` point at `dist/index.js` (CJS); `import` and `module` point at `dist/index.mjs` (ESM). 1.14.0 pointed `require` at a non-existent `index.cjs` and `import` at the CJS file.
+- **`SoundCloudError.errorCode` reads the OAuth `error` field** when `error_code` is absent (the shape `/oauth/token` actually returns). New getters: `isInvalidGrant`, `isPermanentAuthError` (`invalid_grant` / `invalid_token` / `invalid_request` / `unauthorized_client` / `access_denied`). Bare 401 and `invalid_client` are **not** treated as permanent.
+- **Concurrent `onTokenRefresh` is single-flight.** Overlapping 401s share one refresh so a rotated refresh token is not burned.
+- **Pagination `next_href` uses the live access token**, honors client `maxRetries` / `onRetry`, and auto-refreshes on 401 (previously snapped the token at `paginate()` start and used default retry with no refresh).
+- **Cache keys hash the access token** (SHA-256) so a Redis/KV backend never stores the raw secret as a key.
+- **`setToken(access)` clears a previous refresh token** so switching to a client-credentials session cannot leave a user refresh token behind. `setToken(access, undefined)` still keeps the existing refresh (auto-refresh when the grant omits `refresh_token`).
+- **Thrown `fetch` (network/DNS) is retried** with the same backoff as 429/5xx, then rethrown. A 200 with invalid JSON throws `SoundCloudError` instead of a raw `SyntaxError`.
+
+---
+
 ## [1.14.0] - 2026-06-10
 
 ### Fixed

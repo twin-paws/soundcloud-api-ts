@@ -110,6 +110,7 @@ export class SoundCloudClient {
   private config: SoundCloudClientConfig;
   private _accessToken?: string;
   private _refreshToken?: string;
+  private refreshCtx: AutoRefreshContext;
 
   /** Authentication methods (OAuth token grants, sign out) */
   public auth: SoundCloudClient.Auth;
@@ -154,12 +155,17 @@ export class SoundCloudClient {
       cache: config.cache,
       cacheTtlMs: config.cacheTtlMs,
     };
+    let refreshInFlight: Promise<{ access_token: string; refresh_token?: string }> | undefined;
     const refreshCtx: AutoRefreshContext = config.onTokenRefresh
       ? {
           getToken,
-          onTokenRefresh: async () => {
-            const result = await config.onTokenRefresh!(this);
-            return result;
+          onTokenRefresh: () => {
+            if (!refreshInFlight) {
+              refreshInFlight = Promise.resolve(config.onTokenRefresh!(this)).finally(() => {
+                refreshInFlight = undefined;
+              });
+            }
+            return refreshInFlight;
           },
           setToken: (a, r) => this.setToken(a, r),
           ...sharedCtx,
@@ -169,6 +175,7 @@ export class SoundCloudClient {
           setToken: /* v8 ignore next */ (a, r) => this.setToken(a, r),
           ...sharedCtx,
         };
+    this.refreshCtx = refreshCtx;
 
     this.auth = new SoundCloudClient.Auth(this.config);
     this.me = new SoundCloudClient.Me(getToken, refreshCtx!);
@@ -185,12 +192,21 @@ export class SoundCloudClient {
   /**
    * Store an access token (and optionally refresh token) on this client instance.
    *
+   * - `setToken(access)` — replace the session; clears any stored refresh token.
+   * - `setToken(access, refresh)` — store both.
+   * - `setToken(access, undefined)` — update access only; keep the existing refresh
+   *   token (used by auto-refresh when the grant omits `refresh_token`).
+   *
    * @param accessToken - The OAuth access token to store
    * @param refreshToken - Optional refresh token for automatic token renewal
    */
   setToken(accessToken: string, refreshToken?: string): void {
     this._accessToken = accessToken;
-    if (refreshToken !== undefined) this._refreshToken = refreshToken;
+    if (arguments.length < 2) {
+      this._refreshToken = undefined;
+    } else if (refreshToken !== undefined) {
+      this._refreshToken = refreshToken;
+    }
   }
 
   /** Clear all stored tokens from this client instance. */
@@ -223,9 +239,7 @@ export class SoundCloudClient {
    * ```
    */
   paginate<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>): AsyncGenerator<T[], void, undefined> {
-    const token = this._accessToken;
-    const onReq = this.config.onRequest;
-    return paginate(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq, this.config.fetch));
+    return paginate(firstPage, (url) => this.fetchNextPage<T>(url));
   }
 
   /**
@@ -242,9 +256,7 @@ export class SoundCloudClient {
    * ```
    */
   paginateItems<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>): AsyncGenerator<T, void, undefined> {
-    const token = this._accessToken;
-    const onReq = this.config.onRequest;
-    return paginateItems(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq, this.config.fetch));
+    return paginateItems(firstPage, (url) => this.fetchNextPage<T>(url));
   }
 
   /**
@@ -262,9 +274,19 @@ export class SoundCloudClient {
    * ```
    */
   fetchAll<T>(firstPage: () => Promise<SoundCloudPaginatedResponse<T>>, options?: { maxItems?: number }): Promise<T[]> {
-    const token = this._accessToken;
-    const onReq = this.config.onRequest;
-    return fetchAll(firstPage, (url) => scFetchUrl<SoundCloudPaginatedResponse<T>>(url, token, undefined, onReq, this.config.fetch), options);
+    return fetchAll(firstPage, (url) => this.fetchNextPage<T>(url), options);
+  }
+
+  /** Follow a `next_href` with the live token, client retry config, and auto-refresh. */
+  private fetchNextPage<T>(url: string): Promise<SoundCloudPaginatedResponse<T>> {
+    return scFetchUrl<SoundCloudPaginatedResponse<T>>(
+      url,
+      this._accessToken,
+      this.refreshCtx.retry,
+      this.config.onRequest,
+      this.config.fetch,
+      this.refreshCtx,
+    );
   }
 }
 

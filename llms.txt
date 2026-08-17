@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.14.0
+# soundcloud-api-ts v1.14.1
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -128,7 +128,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
 
 ### Client Methods
 
-    sc.setToken(accessToken: string, refreshToken?: string): void
+    sc.setToken(accessToken: string, refreshToken?: string): void  // one arg clears stored refresh token
     sc.clearToken(): void
     sc.accessToken: string | undefined
     sc.refreshToken: string | undefined
@@ -177,7 +177,9 @@ try {
     if (err.isNotFound) console.log('Not found');
     if (err.isRateLimited) console.log('Rate limited');
     if (err.isUnauthorized) console.log('Bad token');
-    console.log(err.status, err.message);
+    if (err.isInvalidGrant) console.log('Refresh token dead — re-authorize');
+    if (err.isPermanentAuthError) console.log('User must reconnect');
+    console.log(err.status, err.message, err.errorCode);
   }
 }
 ```
@@ -188,11 +190,13 @@ const sc = new SoundCloudClient({
   clientId: '...', clientSecret: '...',
   onTokenRefresh: async (client) => {
     const newToken = await client.auth.refreshUserToken(client.refreshToken!);
+    // Persist newToken.refresh_token atomically — SC rotates it every refresh
     client.setToken(newToken.access_token, newToken.refresh_token);
     return newToken;
   },
 });
 ```
+Concurrent 401s share one refresh. Fires for namespace methods and pagination `next_href`.
 
 ### Request Telemetry
 ```ts
@@ -223,7 +227,7 @@ const sc = new SoundCloudClient({
 });
 ```
 `SoundCloudCache`: `{ get<T>(key): T|undefined; set<T>(key, value, {ttlMs}): void; delete(key): void }`
-Applies to GETs made through the client namespaces. `sc.raw.*` and pagination `next_href` fetches are not deduped/cached. (Note: these options existed but were not wired up in v1.12.0–v1.13.4.)
+Applies to GETs made through the client namespaces. `sc.raw.*` is not deduped/cached. Pagination `next_href` is not deduped/cached but uses the live token, client retry config, and `onTokenRefresh`. Cache keys hash the access token. (Note: these options existed but were not wired up in v1.12.0–v1.13.4.)
 
 ## Fetch Injection & Runtime Portability
 ```ts

@@ -13,6 +13,22 @@ describe("SoundCloudClient", () => {
     expect(c.refreshToken).toBe("rt");
   });
 
+  it("setToken(access) clears a previous refresh token", () => {
+    const c = new SoundCloudClient({ clientId: "cid", clientSecret: "cs" });
+    c.setToken("user-at", "user-rt");
+    c.setToken("client-at");
+    expect(c.accessToken).toBe("client-at");
+    expect(c.refreshToken).toBeUndefined();
+  });
+
+  it("setToken(access, undefined) keeps the existing refresh token", () => {
+    const c = new SoundCloudClient({ clientId: "cid", clientSecret: "cs" });
+    c.setToken("at", "rt");
+    c.setToken("at2", undefined);
+    expect(c.accessToken).toBe("at2");
+    expect(c.refreshToken).toBe("rt");
+  });
+
   it("clearToken clears both tokens", () => {
     const c = new SoundCloudClient({ clientId: "cid", clientSecret: "cs" });
     c.setToken("at", "rt");
@@ -109,5 +125,57 @@ describe("SoundCloudClient", () => {
     expect(refreshFn).toHaveBeenCalled();
     expect(c.accessToken).toBe("new-tok");
     expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("concurrent 401s share a single onTokenRefresh call", async () => {
+    let releaseRefresh!: () => void;
+    const refreshGate = new Promise<void>((res) => { releaseRefresh = () => res(); });
+    const refreshFn = vi.fn().mockImplementation(async () => {
+      await refreshGate;
+      return { access_token: "new-tok", refresh_token: "new-rt" };
+    });
+
+    type Resolver = (value: unknown) => void;
+    const pending: Resolver[] = [];
+    const fn = vi.fn().mockImplementation((url: string) => {
+      return new Promise((resolve) => {
+        pending.push(resolve);
+      }).then(() => {
+        const callsForUrl = fn.mock.calls.filter((c) => String(c[0]) === String(url)).length;
+        const isRetry = callsForUrl > 1;
+        if (!isRetry) {
+          return {
+            status: 401, statusText: "Unauthorized", ok: false,
+            json: vi.fn().mockResolvedValue({ error: "invalid_token" }),
+            headers: { get: () => null },
+          };
+        }
+        return {
+          status: 200, statusText: "OK", ok: true,
+          json: vi.fn().mockResolvedValue({ id: String(url).includes("users/1") ? 1 : 2 }),
+          headers: { get: () => null },
+        };
+      });
+    });
+    globalThis.fetch = fn as unknown as typeof fetch;
+
+    const c = new SoundCloudClient({ clientId: "cid", clientSecret: "cs", onTokenRefresh: refreshFn });
+    c.setToken("old-tok", "old-rt");
+
+    const p1 = c.users.getUser(1);
+    const p2 = c.users.getUser(2);
+    await vi.waitFor(() => expect(pending.length).toBe(2));
+    pending.splice(0).forEach((resolve) => resolve(undefined));
+    await vi.waitFor(() => expect(refreshFn).toHaveBeenCalledTimes(1));
+    releaseRefresh();
+    await vi.waitFor(() => expect(pending.length).toBe(2));
+    pending.splice(0).forEach((resolve) => resolve(undefined));
+
+    const [a, b] = await Promise.all([p1, p2]);
+    expect(a).toEqual({ id: 1 });
+    expect(b).toEqual({ id: 2 });
+    expect(refreshFn).toHaveBeenCalledTimes(1);
+    expect(c.accessToken).toBe("new-tok");
+    expect(c.refreshToken).toBe("new-rt");
   });
 });

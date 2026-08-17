@@ -110,11 +110,13 @@ try {
   if (err instanceof SoundCloudError) {
     err.status;        // HTTP status code (404, 401, 429, etc.)
     err.message;       // Human-readable error message
+    err.errorCode;     // error_code or OAuth error (e.g. "invalid_grant")
+    err.isInvalidGrant; // refresh token is dead — user must re-authorize
+    err.isPermanentAuthError; // invalid_grant / invalid_token / invalid_request / unauthorized_client / access_denied
     err.isNotFound;    // true if 404
     err.isUnauthorized; // true if 401
     err.isRateLimited; // true if 429
     err.isServerError; // true if 5xx
-    err.errorCode;     // Machine-readable code like "invalid_client"
   }
 }
 ```
@@ -123,18 +125,18 @@ try {
 
 1. **Token required for ALL requests** — even public endpoints like `getTrack` need at least a client credentials token. Call `setToken()` first.
 2. **User token vs client token** — write operations (like, repost, comment, follow, create/update/delete) require a user token obtained via the authorization code flow. A client credentials token won't work.
-3. **Rate limits exist** — SoundCloud returns 429 when rate limited. The client has built-in retry with exponential backoff (configurable via `maxRetries` and `retryBaseDelay`). `Retry-After` header is honored (capped 60s).
-4. **Auto token refresh** — pass `onTokenRefresh` in the config to automatically refresh expired tokens on 401.
+3. **Rate limits exist** — SoundCloud returns 429 when rate limited. The client retries 429, 5xx, and thrown `fetch` (network/DNS) with exponential backoff (configurable via `maxRetries` and `retryBaseDelay`). `Retry-After` is honored (capped 60s). A 200 with invalid JSON throws `SoundCloudError`.
+4. **Auto token refresh** — pass `onTokenRefresh` in the config to automatically refresh expired tokens on 401. Concurrent 401s share a single in-flight refresh. Persist the new refresh token atomically in that callback or you lose the session. `setToken(access)` (one argument) clears any stored refresh token.
 5. **Request telemetry** — pass `onRequest` in the config to receive `SCRequestTelemetry` after every client-namespace request (method, path, duration, status, retries, error), including pagination and retries. NOT emitted for `sc.raw.*` or `auth.signOut`.
 6. **sc.raw** — `sc.raw.get('/tracks/{id}', { id: 123456 })` calls any endpoint without a typed wrapper. Returns `RawResponse<T>` with `{ data, status, headers }`. Does NOT throw on non-2xx — check `res.status` yourself. Good for endpoints not yet wrapped.
 7. **Fetch injection** — pass `fetch` in the constructor for Bun/Deno/Cloudflare Workers portability. No Node-only APIs used at runtime. There is no `AbortController` option — bake cancellation/timeouts into the `fetch` you inject.
-8. **Deduplication** — concurrent identical GETs through the client namespaces share a single in-flight promise (`dedupe: true` by default; wired up in v1.14.0 — earlier versions accepted but ignored the option). `sc.raw.*` and pagination `next_href` fetches are not deduped.
-9. **Cache** — pass a `SoundCloudCache` implementation in the constructor to cache namespace GET responses (also wired up in v1.14.0). Base package defines the interface only; bring your own backend. `cacheTtlMs` defaults to 60000ms.
+8. **Deduplication** — concurrent identical GETs through the client namespaces share a single in-flight promise (`dedupe: true` by default; wired up in v1.14.0 — earlier versions accepted but ignored the option). `sc.raw.*` is not deduped. Pagination `next_href` fetches are not deduped, but they do use the live token, client retry config, and `onTokenRefresh`.
+9. **Cache** — pass a `SoundCloudCache` implementation in the constructor to cache namespace GET responses (also wired up in v1.14.0). Base package defines the interface only; bring your own backend. `cacheTtlMs` defaults to 60000ms. Cache keys hash the access token — they never contain the raw secret.
 10. **Retry hook** — pass `onRetry` to receive `RetryInfo` on each retry: `{ attempt, delayMs, reason, status?, url }`.
 11. **`sc.tracks.getTracks(ids[])`** — batch fetch multiple tracks by ID array in a single request. Max 200 IDs — throws immediately above that, before any network call. Returns `SoundCloudTrack[]` (may be shorter than input if some tracks are unavailable).
 12. **`sc.me.getConnections()`** — list linked social accounts. Requires user token. May require elevated API access.
 13. **TokenProvider / TokenStore interfaces** — in `src/auth/token-provider.ts`. Implement to integrate with NextAuth, Clerk, Redis, or any session framework. See `docs/auth-guide.md`.
-14. **Auth guide** — `docs/auth-guide.md` covers: client creds vs user tokens, full PKCE flow, auto-refresh, NextAuth/Clerk bridge patterns, 401 troubleshooting table (invalid_client / insufficient_scope / invalid_token / unauthorized_client).
+14. **Auth guide** — `docs/auth-guide.md` covers: client creds vs user tokens, full PKCE flow, auto-refresh, NextAuth/Clerk bridge patterns, 401 troubleshooting. Prefer `err.isInvalidGrant` / `err.isPermanentAuthError` over checking HTTP status alone. `errorCode` is `error_code` or OAuth `error`.
 15. **OpenAPI tooling** — `pnpm openapi:sync` fetches the spec (if available), `pnpm openapi:coverage` reports implemented vs total. `src/client/registry.ts` is the source of truth — update it when adding new endpoints.
 16. **No env vars** — the package reads no environment variables. Pass `clientId`, `clientSecret`, and `redirectUri` directly to the constructor.
 17. **IDs can be numbers or strings** — all ID parameters accept `string | number`.

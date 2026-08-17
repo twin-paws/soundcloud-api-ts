@@ -94,7 +94,9 @@ export class SoundCloudError extends Error {
     this.name = "SoundCloudError";
     this.status = status;
     this.statusText = statusText;
-    this.errorCode = body?.error_code ?? undefined;
+    // OAuth token errors use RFC 6749 `error`; some SC API errors use `error_code`.
+    const code = body?.error_code || body?.error || undefined;
+    this.errorCode = code || undefined;
     this.docsLink = body?.link ?? undefined;
     this.errors =
       body?.errors
@@ -127,4 +129,30 @@ export class SoundCloudError extends Error {
   get isServerError(): boolean {
     return this.status >= 500 && this.status < 600;
   }
+
+  /** True if the OAuth error is `invalid_grant` (refresh token is dead; user must re-authorize) */
+  get isInvalidGrant(): boolean {
+    return this.normalizedErrorCode === "invalid_grant";
+  }
+
+  /**
+   * True if the OAuth error means the user token is permanently unusable.
+   * Does **not** include `invalid_client` — SoundCloud sometimes returns that as a transient 401.
+   */
+  get isPermanentAuthError(): boolean {
+    return PERMANENT_AUTH_ERROR_CODES.has(this.normalizedErrorCode);
+  }
+
+  private get normalizedErrorCode(): string {
+    return (this.errorCode ?? "").toLowerCase().trim();
+  }
 }
+
+/** OAuth codes that mean the user must reconnect. `invalid_client` is intentionally excluded. */
+const PERMANENT_AUTH_ERROR_CODES = new Set([
+  "invalid_grant",
+  "invalid_token",
+  "invalid_request",
+  "unauthorized_client",
+  "access_denied",
+]);

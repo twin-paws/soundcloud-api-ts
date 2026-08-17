@@ -100,6 +100,13 @@ const DEFAULT_CACHE_TTL_MS = 60000;
 
 const DEFAULT_RETRY: RetryConfig = { maxRetries: 3, retryBaseDelay: 1000 };
 
+/** SHA-256 hex of a token so Redis/KV cache keys never store the raw secret. */
+async function tokenFingerprint(token: string): Promise<string> {
+  const data = new TextEncoder().encode(token);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 /**
  * Creates a promise that resolves after the specified delay.
  *
@@ -175,19 +182,23 @@ export async function scFetch<T>(
     return scFetchCore(options, refreshCtx, onRequest);
   }
 
-  const key = `GET ${options.path} ${options.token ?? ""}`;
+  // Dedupe key stays in-process and must be computed synchronously so concurrent
+  // callers join the same in-flight promise. Cache keys hash the token so a
+  // Redis/KV backend never stores the raw secret.
+  const dedupeKey = `GET ${options.path} ${options.token ?? ""}`;
   const run = async (): Promise<T> => {
+    const cacheKey = `GET ${options.path} ${options.token ? await tokenFingerprint(options.token) : ""}`;
     if (cache) {
-      const hit = await cache.get<T>(key);
+      const hit = await cache.get<T>(cacheKey);
       if (hit !== undefined) return hit;
     }
     const result = await scFetchCore<T>(options, refreshCtx, onRequest);
     if (cache && result !== undefined) {
-      await cache.set(key, result, { ttlMs: refreshCtx?.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS });
+      await cache.set(cacheKey, result, { ttlMs: refreshCtx?.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS });
     }
     return result;
   };
-  return deduper ? deduper.add(key, run) : run();
+  return deduper ? deduper.add(dedupeKey, run) : run();
 }
 
 async function scFetchCore<T>(
@@ -245,12 +256,33 @@ async function scFetchCore<T>(
     const fetchFn = refreshCtx?.fetchImpl ?? fetch;
 
     for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
-      const response = await fetchFn(url, {
-        method: options.method,
-        headers,
-        body: fetchBody,
-        redirect: "manual",
-      });
+      let response: Awaited<ReturnType<typeof fetch>>;
+      try {
+        response = await fetchFn(url, {
+          method: options.method,
+          headers,
+          body: fetchBody,
+          redirect: "manual",
+        });
+      } catch (networkErr) {
+        if (attempt < retryConfig.maxRetries) {
+          retryCount = attempt + 1;
+          const delayMs = getRetryDelay({ status: 0, headers: { get: () => null } }, attempt, retryConfig);
+          retryConfig.onDebug?.(
+            `Retry ${attempt + 1}/${retryConfig.maxRetries} after ${Math.round(delayMs)}ms (network)`,
+          );
+          retryConfig.onRetry?.({
+            attempt: retryCount,
+            delayMs,
+            reason: "network",
+            url,
+          });
+          await delay(delayMs);
+          continue;
+        }
+        emitTelemetry(networkErr instanceof Error ? networkErr.message : "network error");
+        throw networkErr;
+      }
 
       finalStatus = response.status;
 
@@ -268,7 +300,14 @@ async function scFetchCore<T>(
       }
 
       if (response.ok) {
-        const data = await response.json();
+        let data: unknown;
+        try {
+          data = await response.json();
+        } catch {
+          const err = new SoundCloudError(response.status, response.statusText, { message: "Invalid JSON response" });
+          emitTelemetry(err.message);
+          throw err;
+        }
         // Attach non-enumerable _meta so callers can access status/headers without breaking toEqual checks
         if (typeof data === "object" && data !== null) {
           const metaHeaders: Record<string, string> = {};
@@ -370,18 +409,19 @@ export async function scFetchUrl<T>(
   retryConfig?: RetryConfig,
   onRequest?: (telemetry: SCRequestTelemetry) => void,
   fetchImpl?: typeof globalThis.fetch,
+  refreshCtx?: AutoRefreshContext,
 ): Promise<T> {
-  const config = retryConfig ?? DEFAULT_RETRY;
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (token) headers["Authorization"] = `OAuth ${token}`;
+  const config = retryConfig ?? refreshCtx?.retry ?? DEFAULT_RETRY;
+  const telemetryCallback = onRequest ?? refreshCtx?.onRequest;
+  const fetchFn = fetchImpl ?? refreshCtx?.fetchImpl ?? fetch;
 
   const startTime = Date.now();
   let retryCount = 0;
   let finalStatus = 0;
 
   const emitTelemetry = (error?: string) => {
-    if (!onRequest) return;
-    onRequest({
+    if (!telemetryCallback) return;
+    telemetryCallback({
       method: "GET",
       path: url,
       durationMs: Date.now() - startTime,
@@ -391,79 +431,127 @@ export async function scFetchUrl<T>(
     });
   };
 
-  let lastResponse: Awaited<ReturnType<typeof fetch>> | undefined;
-  const fetchFn = fetchImpl ?? fetch;
+  const execute = async (tokenOverride?: string): Promise<T> => {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    const authToken = tokenOverride ?? token;
+    if (authToken) headers["Authorization"] = `OAuth ${authToken}`;
 
-  for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
-    const response = await fetchFn(url, { method: "GET", headers, redirect: "manual" });
+    let lastResponse: Awaited<ReturnType<typeof fetch>> | undefined;
 
-    finalStatus = response.status;
+    for (let attempt = 0; attempt <= config.maxRetries; attempt++) {
+      let response: Awaited<ReturnType<typeof fetch>>;
+      try {
+        response = await fetchFn(url, { method: "GET", headers, redirect: "manual" });
+      } catch (networkErr) {
+        if (attempt < config.maxRetries) {
+          retryCount = attempt + 1;
+          const delayMs = getRetryDelay({ status: 0, headers: { get: () => null } }, attempt, config);
+          config.onDebug?.(
+            `Retry ${attempt + 1}/${config.maxRetries} after ${Math.round(delayMs)}ms (network)`,
+          );
+          config.onRetry?.({
+            attempt: retryCount,
+            delayMs,
+            reason: "network",
+            url,
+          });
+          await delay(delayMs);
+          continue;
+        }
+        emitTelemetry(networkErr instanceof Error ? networkErr.message : "network error");
+        throw networkErr;
+      }
 
-    if (response.status === 302) {
-      const location = response.headers.get("location");
-      if (location) {
+      finalStatus = response.status;
+
+      if (response.status === 302) {
+        const location = response.headers.get("location");
+        if (location) {
+          emitTelemetry();
+          return location as T;
+        }
+      }
+
+      if (response.status === 204 || response.headers.get("content-length") === "0") {
         emitTelemetry();
-        return location as T;
+        return undefined as T;
       }
-    }
 
-    if (response.status === 204 || response.headers.get("content-length") === "0") {
-      emitTelemetry();
-      return undefined as T;
-    }
-
-    if (response.ok) {
-      const data = await response.json();
-      if (typeof data === "object" && data !== null) {
-        const metaHeaders: Record<string, string> = {};
-        if (typeof response.headers.forEach === "function") {
-          response.headers.forEach((value: string, key: string) => {
-            metaHeaders[key] = value;
-          });
-        }
+      if (response.ok) {
+        let data: unknown;
         try {
-          Object.defineProperty(data, "_meta", {
-            value: { status: response.status, headers: metaHeaders },
-            enumerable: false,
-            configurable: true,
-            writable: true,
-          });
+          data = await response.json();
         } catch {
-          // frozen objects — skip
+          const err = new SoundCloudError(response.status, response.statusText, { message: "Invalid JSON response" });
+          emitTelemetry(err.message);
+          throw err;
         }
+        if (typeof data === "object" && data !== null) {
+          const metaHeaders: Record<string, string> = {};
+          if (typeof response.headers.forEach === "function") {
+            response.headers.forEach((value: string, key: string) => {
+              metaHeaders[key] = value;
+            });
+          }
+          try {
+            Object.defineProperty(data, "_meta", {
+              value: { status: response.status, headers: metaHeaders },
+              enumerable: false,
+              configurable: true,
+              writable: true,
+            });
+          } catch {
+            // frozen objects — skip
+          }
+        }
+        emitTelemetry();
+        return data as T;
       }
-      emitTelemetry();
-      return data as T;
+
+      if (!isRetryable(response.status)) {
+        const body = await parseErrorBody(response);
+        const err = new SoundCloudError(response.status, response.statusText, body as SoundCloudErrorBody);
+        emitTelemetry(err.message);
+        throw err;
+      }
+
+      lastResponse = response;
+
+      if (attempt < config.maxRetries) {
+        retryCount = attempt + 1;
+        const delayMs = getRetryDelay(response, attempt, config);
+        config.onDebug?.(
+          `Retry ${attempt + 1}/${config.maxRetries} after ${Math.round(delayMs)}ms (status ${response.status})`,
+        );
+        config.onRetry?.({
+          attempt: retryCount,
+          delayMs,
+          reason: `${response.status} ${response.statusText}`,
+          status: response.status,
+          url,
+        });
+        await delay(delayMs);
+      }
     }
 
-    if (!isRetryable(response.status)) {
-      const body = await parseErrorBody(response);
-      const err = new SoundCloudError(response.status, response.statusText, body as SoundCloudErrorBody);
-      emitTelemetry(err.message);
-      throw err;
-    }
+    const body = await parseErrorBody(lastResponse!);
+    const err = new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as SoundCloudErrorBody);
+    emitTelemetry(err.message);
+    throw err;
+  };
 
-    lastResponse = response;
-
-    if (attempt < config.maxRetries) {
-      retryCount = attempt + 1;
-      const delayMs = getRetryDelay(response, attempt, config);
-      config.onDebug?.(
-        `Retry ${attempt + 1}/${config.maxRetries} after ${Math.round(delayMs)}ms (status ${response.status})`,
-      );
-      config.onRetry?.({
-        attempt: retryCount,
-        delayMs,
-        reason: `${response.status} ${response.statusText}`,
-        status: response.status,
-        url,
-      });
-      await delay(delayMs);
+  try {
+    return await execute();
+  } catch (err) {
+    if (
+      refreshCtx?.onTokenRefresh &&
+      err instanceof SoundCloudError &&
+      err.status === 401
+    ) {
+      const newToken = await refreshCtx.onTokenRefresh();
+      refreshCtx.setToken(newToken.access_token, newToken.refresh_token);
+      return execute(newToken.access_token);
     }
+    throw err;
   }
-
-  const body = await parseErrorBody(lastResponse!);
-  const err = new SoundCloudError(lastResponse!.status, lastResponse!.statusText, body as SoundCloudErrorBody);
-  emitTelemetry(err.message);
-  throw err;
 }

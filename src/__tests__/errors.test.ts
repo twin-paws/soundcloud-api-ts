@@ -56,6 +56,47 @@ describe("SoundCloudError", () => {
     expect(err.errorCode).toBe("invalid_grant");
   });
 
+  it("errorCode reads OAuth error when error_code is absent", () => {
+    const err = new SoundCloudError(400, "Bad Request", {
+      error: "invalid_grant",
+      error_description: "The refresh token is invalid",
+    });
+    expect(err.errorCode).toBe("invalid_grant");
+    expect(err.message).toBe("The refresh token is invalid");
+    expect(err.isInvalidGrant).toBe(true);
+  });
+
+  it("errorCode prefers error_code over error", () => {
+    const err = new SoundCloudError(401, "Unauthorized", {
+      error: "invalid_grant",
+      error_code: "invalid_token",
+    });
+    expect(err.errorCode).toBe("invalid_token");
+  });
+
+  it("errorCode ignores null OAuth error", () => {
+    const err = new SoundCloudError(401, "Unauthorized", {
+      error: null,
+      error_code: "invalid_client",
+    });
+    expect(err.errorCode).toBe("invalid_client");
+    expect(err.isInvalidGrant).toBe(false);
+  });
+
+  it("isInvalidGrant is false for other codes", () => {
+    expect(new SoundCloudError(401, "Unauthorized", { error: "insufficient_scope" }).isInvalidGrant).toBe(false);
+    expect(new SoundCloudError(401, "Unauthorized").isInvalidGrant).toBe(false);
+  });
+
+  it("isPermanentAuthError matches known dead-token OAuth codes", () => {
+    for (const code of ["invalid_grant", "invalid_token", "invalid_request", "unauthorized_client", "access_denied"]) {
+      expect(new SoundCloudError(400, "Bad Request", { error: code }).isPermanentAuthError).toBe(true);
+    }
+    // invalid_client is often a transient infra 401 — not a dead user token
+    expect(new SoundCloudError(401, "Unauthorized", { error: "invalid_client" }).isPermanentAuthError).toBe(false);
+    expect(new SoundCloudError(401, "Unauthorized").isPermanentAuthError).toBe(false);
+  });
+
   it("falls back to errors array", () => {
     const err = new SoundCloudError(422, "Unprocessable", {
       errors: [{ error_message: "title is required" }],

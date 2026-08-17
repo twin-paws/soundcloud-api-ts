@@ -168,6 +168,63 @@ describe("scFetchUrl", () => {
   });
 });
 
+describe("scFetch network and parse failures", () => {
+  it("retries a thrown fetch and succeeds", async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce({
+        status: 200, statusText: "OK", ok: true,
+        json: vi.fn().mockResolvedValue({ id: 1 }),
+        headers: { get: () => null },
+      });
+    globalThis.fetch = fn as unknown as typeof fetch;
+    const result = await scFetch(
+      { path: "/tracks/1", method: "GET", token: "tok" },
+      { getToken: () => "tok", setToken: () => {}, retry: { maxRetries: 1, retryBaseDelay: 0 } },
+    );
+    expect(result).toEqual({ id: 1 });
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("rethrows the network error after retries are exhausted", async () => {
+    const fn = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    globalThis.fetch = fn as unknown as typeof fetch;
+    await expect(
+      scFetch(
+        { path: "/tracks/1", method: "GET", token: "tok" },
+        { getToken: () => "tok", setToken: () => {}, retry: { maxRetries: 1, retryBaseDelay: 0 } },
+      ),
+    ).rejects.toThrow(TypeError);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("wraps invalid JSON on a 200 as SoundCloudError", async () => {
+    mockFetchJsonThrows({ status: 200, statusText: "OK", ok: true });
+    const err = await scFetch(
+      { path: "/tracks/1", method: "GET", token: "tok" },
+      { getToken: () => "tok", setToken: () => {}, retry: { maxRetries: 0, retryBaseDelay: 0 } },
+    ).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SoundCloudError);
+    expect((err as SoundCloudError).status).toBe(200);
+    expect((err as SoundCloudError).message).toMatch(/invalid json/i);
+  });
+
+  it("scFetchUrl retries a thrown fetch and wraps invalid JSON", async () => {
+    const fn = vi.fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce({
+        status: 200, statusText: "OK", ok: true,
+        json: vi.fn().mockRejectedValue(new Error("bad json")),
+        headers: { get: () => null },
+      });
+    globalThis.fetch = fn as unknown as typeof fetch;
+    await expect(
+      scFetchUrl("https://api.soundcloud.com/next", "tok", { maxRetries: 1, retryBaseDelay: 0 }),
+    ).rejects.toThrow(SoundCloudError);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("parseErrorBody catch branch", () => {
   it("returns undefined in error body when response.json() throws", async () => {
     mockFetchJsonThrows({ status: 403, statusText: "Forbidden" });

@@ -158,4 +158,54 @@ describe("SoundCloudClient pagination methods", () => {
     }
     expect(items).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
   });
+
+  it("next_href uses the live access token, not the one captured at start", async () => {
+    const fn = mockFetchSequence([
+      { json: makePage([{ id: 1 }], "https://api.soundcloud.com/next") },
+      { json: makePage([{ id: 2 }]) },
+    ]);
+    sc.setToken("tok-start");
+
+    const gen = sc.paginate(() => sc.search.tracks("test"));
+    const first = await gen.next();
+    expect(first.value).toEqual([{ id: 1 }]);
+    sc.setToken("tok-later");
+    const second = await gen.next();
+    expect(second.value).toEqual([{ id: 2 }]);
+
+    expect(fn.mock.calls[1][1].headers.Authorization).toBe("OAuth tok-later");
+  });
+
+  it("401 on next_href refreshes and retries", async () => {
+    const refreshFn = vi.fn().mockResolvedValue({ access_token: "refreshed", refresh_token: "new-rt" });
+    sc = new SoundCloudClient({
+      clientId: "id",
+      clientSecret: "secret",
+      onTokenRefresh: refreshFn,
+    });
+    sc.setToken("expired", "rt");
+
+    mockFetchSequence([
+      { json: makePage([{ id: 1 }], "https://api.soundcloud.com/next") },
+      { status: 401, statusText: "Unauthorized", ok: false, json: { error: "invalid_token" } },
+      { json: makePage([{ id: 2 }]) },
+    ]);
+
+    const all = await sc.fetchAll(() => sc.search.tracks("test"));
+    expect(all).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(refreshFn).toHaveBeenCalledTimes(1);
+    expect(sc.accessToken).toBe("refreshed");
+  });
+
+  it("next_href honors client maxRetries: 0", async () => {
+    sc = new SoundCloudClient({ clientId: "id", clientSecret: "secret", maxRetries: 0 });
+    sc.setToken("tok");
+    const fn = mockFetchSequence([
+      { json: makePage([{ id: 1 }], "https://api.soundcloud.com/next") },
+      { status: 503, statusText: "Service Unavailable", ok: false, json: {} },
+    ]);
+
+    await expect(sc.fetchAll(() => sc.search.tracks("test"))).rejects.toThrow();
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
 });

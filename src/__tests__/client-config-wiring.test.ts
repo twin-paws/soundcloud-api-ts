@@ -137,6 +137,28 @@ describe("cache wiring", () => {
     expect(cache2.setCalls[0].ttlMs).toBe(60000);
   });
 
+  it("does not store the raw access token in cache keys", async () => {
+    mockFetch({ json: { id: 1 } });
+    const cache = makeCache();
+    const sc = new SoundCloudClient({ ...config, cache });
+    sc.setToken("super-secret-token");
+    await sc.tracks.getTrack(1);
+    expect(cache.setCalls.length).toBe(1);
+    expect(cache.setCalls[0].key).not.toContain("super-secret-token");
+    expect(cache.setCalls[0].key.startsWith("GET /tracks/1 ")).toBe(true);
+  });
+
+  it("different tokens do not share a cached GET", async () => {
+    const fn = mockFetch({ json: { id: 1 } });
+    const cache = makeCache();
+    const sc = new SoundCloudClient({ ...config, cache });
+    sc.setToken("tok-a");
+    await sc.tracks.getTrack(1);
+    sc.setToken("tok-b");
+    await sc.tracks.getTrack(1);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
   it("does not cache POST responses", async () => {
     const fn = mockFetch({ json: { id: 1 } });
     const cache = makeCache();
