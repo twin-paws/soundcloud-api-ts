@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2026-08-17
+
+Matches SoundCloud's official [Building with AI](https://developers.soundcloud.com/docs/building-with-ai), [LLM Context](https://developers.soundcloud.com/docs/llm-context), and [API Guide](https://developers.soundcloud.com/docs/api/guide).
+
+### Added
+
+- **`sc.users.getRelated` / `getRelatedUsers`** — `GET /users/{id}/related` (related artists), paginated.
+- **`sc.tracks.getRelatedPage` / `getRelatedTracksPage`** — official `{ collection, next_href }` related-tracks response.
+- **`sc.tracks.getStreamUrl` / `getTrackStreamUrl`** — `GET /tracks/{id}/stream` (302 `Location`).
+- **`sc.tracks.getPreviewUrl` / `getTrackPreviewUrl`** — `GET /tracks/{id}/preview` (302 `Location`).
+- **`sc.tracks.upload` / `uploadTrack`** — `POST /tracks` multipart upload (`track[title]` + `track[asset_data]`).
+- **`refreshToken`** — alias of `refreshUserToken`; official docs use this grant for **both** user and client-credentials tokens.
+- **Remaining current OpenAPI routes** from [openapi/api.yaml](https://github.com/soundcloud/api/blob/master/openapi/api.yaml): `sc.me.getFeed` / `getFeedTracks` (replace deprecated activities), `getRecentlyPlayedTracks`, `getRepostsTracks` / `getRepostsPlaylists`; `sc.users.getRepostsTracks` / `getRepostsPlaylists`; `sc.tracks.updateStorefront`. Deprecated spec aliases (`/favorites`, nested following GETs) are not wrapped.
+- **Search `limit` (1–200) and `access`** — track search defaults to `access=playable` per official examples.
+- **`IMPLEMENTED_ROUTES`** — coverage keyed by `METHOD path` against the live OpenAPI spec.
+
+### Changed
+
+- **`getRelated` / `getRelatedTracks`** send `linked_partitioning=true&access=playable`. Still return a `SoundCloudTrack[]` (unwraps `collection` when the API returns a page) so existing callers including tsd-mono keep working.
+- **Class `refreshUserToken` no longer requires `redirectUri`.** Official client-credentials refresh omits `redirect_uri`; it is only sent when configured.
+- **OpenAPI sync** fetches `docs/api/explorer/api.json` and `openapi/api.yaml` (the URLs SoundCloud publishes for LLMs).
+- **CLI** stores the client-credentials `refresh_token` and reuses it on later runs instead of minting a new token every time (official limit: 50 CC tokens / 12h / app).
+
+### Documentation
+
+- Auth guide / AGENTS / llms / llms-full: class + standalone lists match the 1.15 surface (feed, related artists, stream/preview, upload, storefront, `refreshToken`). Client-credentials tokens include a refresh token and must be reused; refresh tokens are single-use; Artist Pro is required to register an app; play-stream quota 15,000/24h; official spec + Building with AI links. Coverage badge is 52/64 current spec operations. `llms-full.txt` ships in the npm package. Embeds: use `soundcloud-widget-react` with `trackId` / `playlistId`, not `getSoundCloudWidgetUrl()`.
+
+---
+
 ## [1.14.1] - 2026-08-16
 
 ### Fixed

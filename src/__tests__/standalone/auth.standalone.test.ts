@@ -54,6 +54,14 @@ describe("refreshUserToken", () => {
     expect(token.access_token).toBe("new_at");
     expect(fn).toHaveBeenCalledTimes(1);
   });
+
+  it("omits redirect_uri when not provided", async () => {
+    const fn = mockFetch({ json: { access_token: "new_at", refresh_token: "new_rt" } });
+    await refreshUserToken("cid", "csecret", undefined, "old_rt");
+    const body = fn.mock.calls[0][1].body as URLSearchParams;
+    expect(body.get("redirect_uri")).toBeNull();
+    expect(body.get("refresh_token")).toBe("old_rt");
+  });
 });
 
 describe("getAuthorizationUrl", () => {

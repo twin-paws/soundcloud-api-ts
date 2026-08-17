@@ -19,7 +19,9 @@ const sc = new SoundCloudClient({
 });
 
 const token = await sc.auth.getClientToken();
-sc.setToken(token.access_token);
+// Official response includes refresh_token. Persist both — do not call getClientToken
+// on every boot (50 tokens / 12h / app, 30 / 1h / IP). Renew with refreshToken().
+sc.setToken(token.access_token, token.refresh_token);
 
 // Now call any public endpoint
 const track = await sc.tracks.getTrack(123456);
@@ -93,7 +95,11 @@ token.scope          // Granted scope (usually "*")
 
 ## 3. Token Refresh
 
-Access tokens expire. There are two ways to handle this.
+Access tokens expire after about **one hour**. Refresh tokens are **single-use**: each refresh returns a new refresh token; the old one is dead. Persist the new pair atomically or you lose the session.
+
+Official client-credentials docs: cache the access token and **renew with the `refresh_token` grant** (`sc.auth.refreshToken` / `refreshUserToken`) instead of another `getClientToken()`. New CC exchanges are rate-limited (50 / 12h per app, 30 / 1h per IP).
+
+There are two ways to handle expiry.
 
 ### Auto-refresh via onTokenRefresh
 
@@ -230,17 +236,18 @@ export async function getSoundCloudClient() {
 
 | Endpoint category | Client Credentials | User Token |
 |---|---|---|
-| `sc.tracks.getTrack`, `sc.tracks.getStreams`, `sc.tracks.getRelated` | ✅ | ✅ |
+| `sc.tracks.getTrack`, `sc.tracks.getStreams`, `sc.tracks.getRelated`, `sc.tracks.getStreamUrl` | ✅ | ✅ |
 | `sc.search.tracks`, `sc.search.users`, `sc.search.playlists` | ✅ | ✅ |
-| `sc.users.getUser`, `sc.users.getFollowers`, etc. | ✅ | ✅ |
+| `sc.users.getUser`, `sc.users.getRelated`, `sc.users.getFollowers`, etc. | ✅ | ✅ |
 | `sc.playlists.getPlaylist`, `sc.playlists.getTracks` | ✅ | ✅ |
 | `sc.resolve.resolveUrl` | ✅ | ✅ |
-| `sc.me.getMe` | ❌ | ✅ |
-| `sc.me.getActivities`, `sc.me.getLikesTracks`, etc. | ❌ | ✅ |
+| `sc.me.getMe`, `sc.me.getFeed`, `sc.me.getRecentlyPlayedTracks` | ❌ | ✅ |
+| `sc.me.getActivities`, `sc.me.getLikesTracks`, `sc.me.getRepostsTracks`, etc. | ❌ | ✅ |
 | `sc.me.getConnections` | ❌ | ✅ |
 | `sc.likes.likeTrack`, `sc.likes.unlikeTrack` | ❌ | ✅ |
 | `sc.reposts.repostTrack`, `sc.reposts.unrepostTrack` | ❌ | ✅ |
-| `sc.tracks.createComment`, `sc.tracks.update`, `sc.tracks.delete` | ❌ | ✅ |
+| `sc.tracks.createComment`, `sc.tracks.update`, `sc.tracks.delete`, `sc.tracks.upload` | ❌ | ✅ |
+| `sc.tracks.updateStorefront` | ❌ | ✅ (owner + creator subscription) |
 | `sc.playlists.create`, `sc.playlists.update`, `sc.playlists.delete` | ❌ | ✅ |
 | `sc.me.follow`, `sc.me.unfollow` | ❌ | ✅ |
 

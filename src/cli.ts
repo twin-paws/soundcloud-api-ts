@@ -126,14 +126,31 @@ function getClient(config: CLIConfig): SoundCloudClient {
   return client;
 }
 
+function persistTokens(client: SoundCloudClient, config: CLIConfig, token: { access_token: string; refresh_token?: string }): void {
+  client.setToken(token.access_token, token.refresh_token);
+  config.token = token.access_token;
+  if (token.refresh_token) config.refreshToken = token.refresh_token;
+  saveConfig(config);
+}
+
 async function ensureToken(client: SoundCloudClient, config: CLIConfig): Promise<void> {
   if (client.accessToken) return;
+  // Official CC limits: 50 tokens / 12h / app. Reuse refresh_token instead of minting.
+  if (config.refreshToken) {
+    const spinner = createSpinner("Refreshing token…");
+    try {
+      const token = await client.auth.refreshToken(config.refreshToken);
+      persistTokens(client, config, token);
+      spinner.stop();
+      return;
+    } catch {
+      spinner.stop();
+    }
+  }
   const spinner = createSpinner("Getting client token…");
   try {
     const token = await client.auth.getClientToken();
-    client.setToken(token.access_token);
-    config.token = token.access_token;
-    saveConfig(config);
+    persistTokens(client, config, token);
     spinner.stop();
   } catch (err) {
     spinner.stop();
@@ -185,7 +202,12 @@ async function cmdAuth(): Promise<void> {
     const client = new SoundCloudClient({ clientId, clientSecret });
     const token = await client.auth.getClientToken();
     spinner.stop(`${col(c.green, "✔")} Credentials verified!`);
-    const config: CLIConfig = { clientId, clientSecret, token: token.access_token };
+    const config: CLIConfig = {
+      clientId,
+      clientSecret,
+      token: token.access_token,
+      refreshToken: token.refresh_token,
+    };
     saveConfig(config);
     console.log(`${col(c.dim, `  Config saved to ${CONFIG_PATH}`)}`);
   } catch (err) {

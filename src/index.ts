@@ -7,7 +7,7 @@ export { RawClient } from "./client/raw.js";
 export type { RawResponse } from "./client/raw.js";
 export type { SoundCloudCache, SoundCloudCacheEntry } from "./client/cache.js";
 export { InFlightDeduper } from "./client/dedupe.js";
-export { IMPLEMENTED_OPERATIONS } from "./client/registry.js";
+export { IMPLEMENTED_OPERATIONS, IMPLEMENTED_ROUTES } from "./client/registry.js";
 
 // Errors
 export { SoundCloudError } from "./errors.js";
@@ -34,15 +34,16 @@ export type {
 } from "./types/api.js";
 
 // Auth
-export { getClientToken, getUserToken, refreshUserToken, signOut, getAuthorizationUrl, generateCodeVerifier, generateCodeChallenge } from "./auth/index.js";
+export { getClientToken, getUserToken, refreshUserToken, refreshToken, signOut, getAuthorizationUrl, generateCodeVerifier, generateCodeChallenge } from "./auth/index.js";
 export type { TokenProvider, TokenStore } from "./auth/token-provider.js";
 
 // Users
-export { getMe, getUser, getFollowers, getFollowings, getUserTracks, getUserPlaylists, getUserLikesTracks, getUserLikesPlaylists, getUserWebProfiles } from "./users/index.js";
+export { getMe, getUser, getFollowers, getFollowings, getUserTracks, getUserPlaylists, getUserLikesTracks, getUserLikesPlaylists, getUserWebProfiles, getRelatedUsers, getUserRepostsTracks, getUserRepostsPlaylists } from "./users/index.js";
 
 // Tracks
-export { getTrack, getTracks, getTrackComments, createTrackComment, getTrackLikes, getTrackReposts, getRelatedTracks, getTrackStreams, likeTrack, unlikeTrack, updateTrack, deleteTrack } from "./tracks/index.js";
-export type { UpdateTrackParams } from "./tracks/index.js";
+export { getTrack, getTracks, getTrackComments, createTrackComment, getTrackLikes, getTrackReposts, getRelatedTracks, getRelatedTracksPage, getTrackStreams, getTrackStreamUrl, getTrackPreviewUrl, likeTrack, unlikeTrack, updateTrack, uploadTrack, deleteTrack } from "./tracks/index.js";
+export { updateTrackStorefront } from "./tracks/index.js";
+export type { UpdateTrackParams, UploadTrackParams, RelatedTracksOptions, StorefrontUpdateParams, SoundCloudStorefront, StorefrontType } from "./tracks/index.js";
 
 // Playlists
 export { getPlaylist, getPlaylistTracks, getPlaylistReposts, createPlaylist, updatePlaylist, deletePlaylist } from "./playlists/index.js";
@@ -50,12 +51,13 @@ export type { CreatePlaylistParams, UpdatePlaylistParams } from "./playlists/ind
 
 // Search
 export { searchTracks, searchUsers, searchPlaylists } from "./search/index.js";
+export type { SearchQueryOptions } from "./search/index.js";
 
 // Resolve
 export { resolveUrl } from "./resolve/index.js";
 
 // Me (authenticated user endpoints)
-export { getMeActivities, getMeActivitiesOwn, getMeActivitiesTracks, getMeLikesTracks, getMeLikesPlaylists, getMeFollowings, getMeFollowingsTracks, followUser, unfollowUser, getMeFollowers, getMePlaylists, getMeTracks, getMeConnections } from "./me/index.js";
+export { getMeActivities, getMeActivitiesOwn, getMeActivitiesTracks, getMeFeed, getMeFeedTracks, getMeRecentlyPlayedTracks, getMeRepostsTracks, getMeRepostsPlaylists, getMeLikesTracks, getMeLikesPlaylists, getMeFollowings, getMeFollowingsTracks, followUser, unfollowUser, getMeFollowers, getMePlaylists, getMeTracks, getMeConnections } from "./me/index.js";
 
 // Likes (likeTrack/unlikeTrack already exported from tracks)
 export { likePlaylist, unlikePlaylist } from "./likes/index.js";

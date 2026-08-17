@@ -1,5 +1,6 @@
 import { scFetch } from "../client/http.js";
 import type { SoundCloudUser, SoundCloudPaginatedResponse } from "../types/api.js";
+import { buildSearchQuery, type SearchQueryOptions } from "./query.js";
 
 /**
  * Search for users by query string.
@@ -20,5 +21,14 @@ import type { SoundCloudUser, SoundCloudPaginatedResponse } from "../types/api.j
  *
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/users/get_users
  */
-export const searchUsers = (token: string, query: string, pageNumber?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>> =>
-  scFetch({ path: `/users?q=${encodeURIComponent(query)}&linked_partitioning=true&limit=10${pageNumber && pageNumber > 0 ? `&offset=${10 * pageNumber}` : ""}`, method: "GET", token });
+export const searchUsers = (
+  token: string,
+  query: string,
+  pageNumber?: number,
+  options?: Omit<SearchQueryOptions, "access">,
+): Promise<SoundCloudPaginatedResponse<SoundCloudUser>> =>
+  scFetch({
+    path: `/users?${buildSearchQuery(query, pageNumber, { limit: options?.limit })}`,
+    method: "GET",
+    token,
+  });

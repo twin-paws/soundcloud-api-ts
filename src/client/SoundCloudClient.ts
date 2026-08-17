@@ -18,6 +18,10 @@ import type {
   SoundCloudConnection,
 } from "../types/api.js";
 import type { UpdateTrackParams } from "../tracks/updateTrack.js";
+import { uploadTrack, type UploadTrackParams } from "../tracks/uploadTrack.js";
+import { updateTrackStorefront, type StorefrontUpdateParams, type SoundCloudStorefront } from "../tracks/updateStorefront.js";
+import type { SearchQueryOptions } from "../search/query.js";
+import { buildSearchQuery } from "../search/query.js";
 import type { CreatePlaylistParams } from "../playlists/createPlaylist.js";
 import type { UpdatePlaylistParams } from "../playlists/updatePlaylist.js";
 
@@ -92,7 +96,7 @@ function resolveToken(tokenGetter: TokenGetter, explicit?: string): string {
  *
  * // Authenticate
  * const token = await sc.auth.getClientToken();
- * sc.setToken(token.access_token);
+ * sc.setToken(token.access_token, token.refresh_token);
  *
  * // Use the API
  * const track = await sc.tracks.getTrack(123456);
@@ -297,7 +301,7 @@ export namespace SoundCloudClient {
    * @example
    * ```ts
    * const token = await sc.auth.getClientToken();
-   * sc.setToken(token.access_token);
+   * sc.setToken(token.access_token, token.refresh_token);
    * ```
    */
   export class Auth {
@@ -359,7 +363,7 @@ export namespace SoundCloudClient {
      * @example
      * ```ts
      * const token = await sc.auth.getClientToken();
-     * sc.setToken(token.access_token);
+     * sc.setToken(token.access_token, token.refresh_token);
      * ```
      *
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
@@ -414,6 +418,17 @@ export namespace SoundCloudClient {
     }
 
     /**
+     * Refresh an expired access token. Official docs use this grant for both
+     * user and client-credentials tokens. Refresh tokens are single-use.
+     *
+     * `redirect_uri` is sent only when configured (required for some user-token
+     * apps; omitted for client-credentials refresh, matching the official curl).
+     */
+    refreshToken(refreshToken: string): Promise<SoundCloudToken> {
+      return this.refreshUserToken(refreshToken);
+    }
+
+    /**
      * Refresh an expired access token using a refresh token.
      *
      * @param refreshToken - The refresh token from a previous token response
@@ -426,20 +441,20 @@ export namespace SoundCloudClient {
      * sc.setToken(newToken.access_token, newToken.refresh_token);
      * ```
      *
-     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth2/post_oauth2_token
+     * @see https://developers.soundcloud.com/docs/api/guide#refreshing-tokens
      */
     async refreshUserToken(refreshToken: string): Promise<SoundCloudToken> {
-      if (!this.config.redirectUri) throw new Error("redirectUri is required for refreshUserToken");
+      const params = new URLSearchParams({
+        grant_type: "refresh_token",
+        client_id: this.config.clientId,
+        client_secret: this.config.clientSecret,
+        refresh_token: refreshToken,
+      });
+      if (this.config.redirectUri) params.set("redirect_uri", this.config.redirectUri);
       return this.fetch<SoundCloudToken>({
         path: "/oauth/token",
         method: "POST",
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          client_id: this.config.clientId,
-          client_secret: this.config.clientSecret,
-          redirect_uri: this.config.redirectUri,
-          refresh_token: refreshToken,
-        }),
+        body: params,
       });
     }
 
@@ -547,6 +562,70 @@ export namespace SoundCloudClient {
     async getActivitiesTracks(limit?: number, options?: TokenOption): Promise<SoundCloudActivitiesResponse> {
       const t = resolveToken(this.getToken, options?.token);
       return this.fetch({ path: `/me/activities/tracks?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
+    }
+
+    /**
+     * Current feed (`GET /me/feed`). Official replacement for deprecated `/me/activities`.
+     *
+     * @see https://github.com/soundcloud/api/blob/master/openapi/api.yaml
+     */
+    async getFeed(limit?: number, options?: TokenOption & { access?: string }): Promise<SoundCloudActivitiesResponse> {
+      const t = resolveToken(this.getToken, options?.token);
+      const params = new URLSearchParams();
+      if (limit !== undefined) params.set("limit", String(limit));
+      if (options?.access) params.set("access", options.access);
+      const q = params.toString();
+      return this.fetch({ path: `/me/feed${q ? `?${q}` : ""}`, method: "GET", token: t });
+    }
+
+    /**
+     * Track-related feed (`GET /me/feed/tracks`). Official replacement for `/me/activities/tracks`.
+     *
+     * @see https://github.com/soundcloud/api/blob/master/openapi/api.yaml
+     */
+    async getFeedTracks(limit?: number, options?: TokenOption & { access?: string }): Promise<SoundCloudActivitiesResponse> {
+      const t = resolveToken(this.getToken, options?.token);
+      const params = new URLSearchParams();
+      if (limit !== undefined) params.set("limit", String(limit));
+      if (options?.access) params.set("access", options.access);
+      const q = params.toString();
+      return this.fetch({ path: `/me/feed/tracks${q ? `?${q}` : ""}`, method: "GET", token: t });
+    }
+
+    /**
+     * Last 25 recently played tracks. No pagination (official spec).
+     *
+     * @see https://github.com/soundcloud/api/blob/master/openapi/api.yaml
+     */
+    async getRecentlyPlayedTracks(options?: TokenOption & { access?: string }): Promise<SoundCloudTrack[]> {
+      const t = resolveToken(this.getToken, options?.token);
+      const q = options?.access ? `?access=${encodeURIComponent(options.access)}` : "";
+      const data = await this.fetch<SoundCloudTrack[] | SoundCloudPaginatedResponse<SoundCloudTrack>>({
+        path: `/me/recently-played/tracks${q}`,
+        method: "GET",
+        token: t,
+      });
+      return Array.isArray(data) ? data : (data.collection ?? []);
+    }
+
+    /**
+     * Authenticated user's track reposts (`GET /me/reposts/tracks`).
+     *
+     * @see https://github.com/soundcloud/api/blob/master/openapi/api.yaml
+     */
+    async getRepostsTracks(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch({ path: `/me/reposts/tracks?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
+    }
+
+    /**
+     * Authenticated user's playlist reposts (`GET /me/reposts/playlists`).
+     *
+     * @see https://github.com/soundcloud/api/blob/master/openapi/api.yaml
+     */
+    async getRepostsPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch({ path: `/me/reposts/playlists?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
     }
 
     /**
@@ -868,6 +947,38 @@ export namespace SoundCloudClient {
       const t = resolveToken(this.getToken, options?.token);
       return this.fetch<SoundCloudWebProfile[]>({ path: `/users/${userId}/web-profiles`, method: "GET", token: t });
     }
+
+    /**
+     * Related artist recommendations for a user.
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/users/get_users__user_id__related
+     */
+    async getRelated(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>> {
+      const t = resolveToken(this.getToken, options?.token);
+      const params = new URLSearchParams({ linked_partitioning: "true" });
+      if (limit !== undefined) params.set("limit", String(limit));
+      return this.fetch({ path: `/users/${userId}/related?${params}`, method: "GET", token: t });
+    }
+
+    /**
+     * A user's track reposts (`GET /users/{id}/reposts/tracks`).
+     *
+     * @see https://github.com/soundcloud/api/blob/master/openapi/api.yaml
+     */
+    async getRepostsTracks(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch({ path: `/users/${userId}/reposts/tracks?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
+    }
+
+    /**
+     * A user's playlist reposts (`GET /users/{id}/reposts/playlists`).
+     *
+     * @see https://github.com/soundcloud/api/blob/master/openapi/api.yaml
+     */
+    async getRepostsPlaylists(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch({ path: `/users/${userId}/reposts/playlists?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
+    }
   }
 
   /**
@@ -1043,9 +1154,68 @@ export namespace SoundCloudClient {
      *
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/tracks/get_tracks__track_id__related
      */
+    /**
+     * First page of related tracks as an array (unwraps official `{ collection, next_href }`).
+     * Sends `linked_partitioning=true&access=playable` per official examples.
+     * Use {@link getRelatedPage} when you need `next_href`.
+     */
     async getRelated(trackId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudTrack[]> {
+      const page = await this.getRelatedPage(trackId, { limit, token: options?.token });
+      return Array.isArray(page) ? page : (page.collection ?? []);
+    }
+
+    /**
+     * Official paginated related-tracks response.
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/tracks/get_tracks__track_id__related
+     */
+    async getRelatedPage(trackId: string | number, options?: TokenOption & { limit?: number; access?: string }): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>> {
       const t = resolveToken(this.getToken, options?.token);
-      return this.fetch<SoundCloudTrack[]>({ path: `/tracks/${trackId}/related${limit ? `?limit=${limit}` : ""}`, method: "GET", token: t });
+      const params = new URLSearchParams();
+      params.set("linked_partitioning", "true");
+      params.set("access", options?.access ?? "playable");
+      if (options?.limit !== undefined) params.set("limit", String(options.limit));
+      return this.fetch({ path: `/tracks/${trackId}/related?${params}`, method: "GET", token: t });
+    }
+
+    /**
+     * 302 stream URL for a track (`GET /tracks/{id}/stream`).
+     *
+     * @see https://developers.soundcloud.com/docs/api/guide
+     */
+    async getStreamUrl(trackId: string | number, options?: TokenOption): Promise<string> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch<string>({ path: `/tracks/${trackId}/stream`, method: "GET", token: t });
+    }
+
+    /**
+     * 302 preview URL for a track (`GET /tracks/{id}/preview`).
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/tracks/get_tracks__track_id__preview
+     */
+    async getPreviewUrl(trackId: string | number, options?: TokenOption): Promise<string> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch<string>({ path: `/tracks/${trackId}/preview`, method: "GET", token: t });
+    }
+
+    /**
+     * Upload a new track (multipart). Requires a user token.
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/tracks/post_tracks
+     */
+    async upload(params: UploadTrackParams, options?: TokenOption): Promise<SoundCloudTrack> {
+      const t = resolveToken(this.getToken, options?.token);
+      return uploadTrack(t, params);
+    }
+
+    /**
+     * Create or replace a track storefront. Omitted optional fields are cleared.
+     *
+     * @see https://github.com/soundcloud/api/blob/master/openapi/api.yaml
+     */
+    async updateStorefront(trackId: string | number, params: StorefrontUpdateParams, options?: TokenOption): Promise<SoundCloudStorefront> {
+      const t = resolveToken(this.getToken, options?.token);
+      return updateTrackStorefront(t, trackId, params);
     }
 
     /**
@@ -1244,9 +1414,13 @@ export namespace SoundCloudClient {
      *
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/tracks/get_tracks
      */
-    async tracks(query: string, pageNumber?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>> {
+    async tracks(query: string, pageNumber?: number, options?: TokenOption & SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>> {
       const t = resolveToken(this.getToken, options?.token);
-      return this.fetch({ path: `/tracks?q=${encodeURIComponent(query)}&linked_partitioning=true&limit=10${pageNumber && pageNumber > 0 ? `&offset=${10 * pageNumber}` : ""}`, method: "GET", token: t });
+      return this.fetch({
+        path: `/tracks?${buildSearchQuery(query, pageNumber, { access: options?.access ?? "playable", limit: options?.limit })}`,
+        method: "GET",
+        token: t,
+      });
     }
 
     /**
@@ -1266,9 +1440,13 @@ export namespace SoundCloudClient {
      *
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/users/get_users
      */
-    async users(query: string, pageNumber?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>> {
+    async users(query: string, pageNumber?: number, options?: TokenOption & SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudUser>> {
       const t = resolveToken(this.getToken, options?.token);
-      return this.fetch({ path: `/users?q=${encodeURIComponent(query)}&linked_partitioning=true&limit=10${pageNumber && pageNumber > 0 ? `&offset=${10 * pageNumber}` : ""}`, method: "GET", token: t });
+      return this.fetch({
+        path: `/users?${buildSearchQuery(query, pageNumber, { limit: options?.limit })}`,
+        method: "GET",
+        token: t,
+      });
     }
 
     /**
@@ -1288,9 +1466,13 @@ export namespace SoundCloudClient {
      *
      * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/playlists/get_playlists
      */
-    async playlists(query: string, pageNumber?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>> {
+    async playlists(query: string, pageNumber?: number, options?: TokenOption & SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>> {
       const t = resolveToken(this.getToken, options?.token);
-      return this.fetch({ path: `/playlists?q=${encodeURIComponent(query)}&linked_partitioning=true&limit=10${pageNumber && pageNumber > 0 ? `&offset=${10 * pageNumber}` : ""}`, method: "GET", token: t });
+      return this.fetch({
+        path: `/playlists?${buildSearchQuery(query, pageNumber, { access: options?.access, limit: options?.limit })}`,
+        method: "GET",
+        token: t,
+      });
     }
   }
 

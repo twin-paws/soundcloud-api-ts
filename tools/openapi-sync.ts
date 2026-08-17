@@ -16,8 +16,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 
 const SPEC_URLS = [
-  "https://raw.githubusercontent.com/soundcloud/api/master/docs/public.yaml",
-  "https://developers.soundcloud.com/api/explorer/sound-cloud-api.json",
+  "https://developers.soundcloud.com/docs/api/explorer/api.json",
+  "https://raw.githubusercontent.com/soundcloud/api/master/openapi/api.yaml",
 ];
 
 interface OpenAPIOperation {
@@ -39,16 +39,42 @@ async function tryFetch(url: string): Promise<string | null> {
   }
 }
 
+const HTTP_METHODS = new Set(["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]);
+
 function parseJsonSpec(text: string): OpenAPIOperation[] {
   const spec = JSON.parse(text) as {
-    paths?: Record<string, Record<string, { operationId?: string }>>;
+    paths?: Record<string, Record<string, { operationId?: string } | unknown>>;
   };
   const ops: OpenAPIOperation[] = [];
   for (const [path, methods] of Object.entries(spec.paths ?? {})) {
     for (const [method, operation] of Object.entries(methods)) {
-      if (typeof operation === "object" && operation !== null && "operationId" in operation) {
-        ops.push({ operationId: String(operation.operationId), path, method: method.toUpperCase() });
-      }
+      const verb = method.toUpperCase();
+      if (!HTTP_METHODS.has(verb)) continue;
+      if (typeof operation !== "object" || operation === null) continue;
+      const opId = (operation as { operationId?: string }).operationId;
+      ops.push({
+        operationId: opId ? String(opId) : `${verb} ${path}`,
+        path,
+        method: verb,
+      });
+    }
+  }
+  return ops;
+}
+
+function parseYamlPaths(text: string): OpenAPIOperation[] {
+  const ops: OpenAPIOperation[] = [];
+  let currentPath = "";
+  for (const line of text.split(/\r?\n/)) {
+    const pathMatch = /^  (\/\S+):$/.exec(line);
+    if (pathMatch) {
+      currentPath = pathMatch[1];
+      continue;
+    }
+    const methodMatch = /^    (get|post|put|delete|patch):$/.exec(line);
+    if (methodMatch && currentPath) {
+      const verb = methodMatch[1].toUpperCase();
+      ops.push({ operationId: `${verb} ${currentPath}`, path: currentPath, method: verb });
     }
   }
   return ops;
@@ -88,19 +114,9 @@ async function main() {
     writeFileSync(yamlPath, rawText, "utf8");
     process.stdout.write(`Saved spec to tools/openapi.yaml (${rawText.length} bytes)\n`);
 
-    // Try to extract operations via regex (basic support)
-    const ops: OpenAPIOperation[] = [];
-    const pathRegex = /^  (\/[^\n:]+):/gm;
-    const opIdRegex = /operationId:\s*(\S+)/g;
-    const methodRegex = /^    (get|post|put|delete|patch):/gm;
-
-    // For YAML specs we skip detailed parsing without a proper YAML lib
-    process.stdout.write(
-      "ℹ️  YAML spec detected — skipping operations extraction (no YAML parser available). " +
-        "Install js-yaml and update this script for full support.\n",
-    );
+    const ops = parseYamlPaths(rawText);
     writeFileSync(join(ROOT, "tools", "openapi-operations.json"), JSON.stringify(ops, null, 2), "utf8");
-    process.stdout.write(`Saved 0 operations to tools/openapi-operations.json\n`);
+    process.stdout.write(`Saved ${ops.length} operations to tools/openapi-operations.json\n`);
     return;
   }
 

@@ -8,7 +8,7 @@ import type { SoundCloudToken } from "../types/api.js";
  *
  * @param clientId - Your SoundCloud application's OAuth client ID
  * @param clientSecret - Your SoundCloud application's OAuth client secret
- * @param redirectUri - The redirect URI registered with your SoundCloud application
+ * @param redirectUri - Redirect URI if one was used to obtain the token; omit for client-credentials refresh
  * @param refreshToken - The refresh token from a previous token response
  * @returns A new OAuth token response with fresh access and refresh tokens
  * @throws {SoundCloudError} When the refresh token is invalid or expired
@@ -31,18 +31,19 @@ import type { SoundCloudToken } from "../types/api.js";
 export const refreshUserToken = (
   clientId: string,
   clientSecret: string,
-  redirectUri: string,
+  redirectUri: string | undefined,
   refreshToken: string,
 ): Promise<SoundCloudToken> => {
+  const params = new URLSearchParams({
+    grant_type: "refresh_token",
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: refreshToken,
+  });
+  if (redirectUri) params.set("redirect_uri", redirectUri);
   return scFetch<SoundCloudToken>({
     path: "/oauth/token",
     method: "POST",
-    body: new URLSearchParams({
-      grant_type: "refresh_token",
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      refresh_token: refreshToken,
-    }),
+    body: params,
   });
 };

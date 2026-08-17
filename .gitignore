@@ -6,4 +6,6 @@ coverage/
 .env.*
 !.env.example
 docs-site/
+tools/openapi.json
+tools/openapi.yaml
 examples/oauth-express/node_modules

@@ -153,8 +153,11 @@ export interface SoundCloudSubscriptionProduct {
  * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/tracks/get_tracks__track_id_
  */
 export interface SoundCloudTrack {
-  /** Access level for the track (e.g. "playable", "preview", "blocked") */
-  access: string;
+  /**
+   * Access level for the caller: `playable`, `preview`, or `blocked`.
+   * Official search examples filter with `access=playable`.
+   */
+  access: "playable" | "preview" | "blocked" | string;
   /** URL to the track's artwork image (may be empty string if none) */
   artwork_url: string;
   /** ISO country codes where the track is available, or null if unrestricted */

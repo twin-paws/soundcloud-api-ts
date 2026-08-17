@@ -11,7 +11,7 @@
 [![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)]()
 [![docs](https://img.shields.io/badge/docs-TypeDoc-blue.svg)](https://twin-paws.github.io/soundcloud-api-ts/)
 [![GitHub stars](https://img.shields.io/github/stars/twin-paws/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-ts)
-[![Endpoints](https://img.shields.io/badge/endpoints-51%20wrapped-blue)](https://github.com/twin-paws/soundcloud-api-ts/blob/main/src/client/registry.ts)
+[![Endpoints](https://img.shields.io/badge/endpoints-52%2F64%20spec-blue)](https://github.com/twin-paws/soundcloud-api-ts/blob/main/src/client/registry.ts)
 
 The TypeScript SoundCloud API client built on the official API. Zero runtime dependencies, native `fetch`, OAuth 2.1 + PKCE, production-grade retry and deduplication, pluggable cache, raw escape hatch, and an interactive CLI.
 
@@ -52,7 +52,7 @@ It is built on SoundCloud's **official documented API** with registered app cred
 | Typed errors | ✅ `SoundCloudError` | ❌ | ❌ |
 | Test coverage | **100%** | — | — |
 | API docs site | ✅ [TypeDoc](https://twin-paws.github.io/soundcloud-api-ts/) | ✅ | ❌ |
-| LLM/AI-friendly | ✅ llms.txt + AGENTS.md | ❌ | ❌ |
+| LLM/AI-friendly | ✅ llms.txt + llms-full.txt + AGENTS.md | ❌ | ❌ |
 
 > **Why does auth method matter?** `soundcloud.ts` and `soundcloud-fetch` scrape SoundCloud's undocumented `api-v2` and require harvesting a client ID from browser dev tools. This breaks whenever SoundCloud ships a frontend update, and the [API Terms of Use](https://developers.soundcloud.com/docs/api/terms-of-use) explicitly prohibit it: *"any attempt to circumvent this and obtain a new client ID and Security Code is strictly prohibited."*
 
@@ -125,9 +125,9 @@ const sc = new SoundCloudClient({
   redirectUri: "https://yourapp.com/callback",
 });
 
-// Get a client token and store it
+// Get a client token and store it (include refresh_token — do not mint a new CC token every boot)
 const token = await sc.auth.getClientToken();
-sc.setToken(token.access_token);
+sc.setToken(token.access_token, token.refresh_token);
 
 // Now all calls use the stored token automatically
 const results = await sc.search.tracks("electronic");
@@ -212,6 +212,7 @@ sc.auth.getAuthorizationUrl({ state?, codeChallenge? })
 sc.auth.getClientToken()
 sc.auth.getUserToken(code, codeVerifier?)
 sc.auth.refreshUserToken(refreshToken)
+sc.auth.refreshToken(refreshToken)  // alias — also used for client-credentials tokens
 sc.auth.signOut(accessToken)
 
 // Me (authenticated user) — primary params first, options last
@@ -229,6 +230,11 @@ sc.me.getFollowers(limit?, options?)
 sc.me.getPlaylists(limit?, options?)
 sc.me.getTracks(limit?, options?)
 sc.me.getConnections(options?)  // connected social accounts; may require app approval
+sc.me.getFeed(limit?, options?)              // current feed (not deprecated /me/activities)
+sc.me.getFeedTracks(limit?, options?)
+sc.me.getRecentlyPlayedTracks(options?)      // last 25; no pagination
+sc.me.getRepostsTracks(limit?, options?)
+sc.me.getRepostsPlaylists(limit?, options?)
 
 // Users
 sc.users.getUser(userId, options?)
@@ -239,6 +245,9 @@ sc.users.getPlaylists(userId, limit?, options?)
 sc.users.getLikesTracks(userId, limit?, cursor?, options?)
 sc.users.getLikesPlaylists(userId, limit?, options?)
 sc.users.getWebProfiles(userId, options?)
+sc.users.getRelated(userId, limit?, options?)  // related artists
+sc.users.getRepostsTracks(userId, limit?, options?)
+sc.users.getRepostsPlaylists(userId, limit?, options?)
 
 // Tracks
 sc.tracks.getTrack(trackId, options?)
@@ -248,7 +257,12 @@ sc.tracks.getComments(trackId, limit?, options?)
 sc.tracks.createComment(trackId, body, timestamp?, options?)
 sc.tracks.getLikes(trackId, limit?, options?)
 sc.tracks.getReposts(trackId, limit?, options?)
-sc.tracks.getRelated(trackId, limit?, options?)
+sc.tracks.getRelated(trackId, limit?, options?)        // array (unwraps collection)
+sc.tracks.getRelatedPage(trackId, options?)            // { collection, next_href }
+sc.tracks.getStreamUrl(trackId, options?)              // 302 Location
+sc.tracks.getPreviewUrl(trackId, options?)             // 302 Location
+sc.tracks.upload(params, options?)                     // user token; multipart
+sc.tracks.updateStorefront(trackId, params, options?)  // Artist Storefront
 sc.tracks.update(trackId, params, options?)
 sc.tracks.delete(trackId, options?)
 
@@ -286,7 +300,9 @@ sc.raw.post('/tracks/{id}/comments', { body: { body: 'great track' } })
 sc.raw.request({ method: 'GET', path: '/me', query: {} })
 ```
 
-Where `options` is `{ token?: string }` — only needed to override the stored token.
+Where `options` is `{ token?: string }` plus search/related extras (`limit`, `access`). Track search defaults to `access=playable`.
+
+Standalone helpers: `getRelatedUsers`, `getRelatedTracksPage`, `getTrackStreamUrl`, `getTrackPreviewUrl`, `uploadTrack`, `updateTrackStorefront`, `refreshToken`. For React/Next embeds use `soundcloud-widget-react` with `trackId` / `playlistId` (official `api.soundcloud.com` resource URL). Do not pass `getSoundCloudWidgetUrl()`.
 
 ## Standalone Functions
 
@@ -433,7 +449,7 @@ import { SoundCloudClient, type RawResponse } from 'soundcloud-api-ts';
 
 const sc = new SoundCloudClient({ clientId, clientSecret });
 const token = await sc.auth.getClientToken();
-sc.setToken(token.access_token);
+sc.setToken(token.access_token, token.refresh_token);
 
 // Path templating: {id} is replaced from the params object
 const res: RawResponse = await sc.raw.get('/tracks/{id}', { id: 123456 });
@@ -579,6 +595,7 @@ This package is built on SoundCloud's **official documented API** (`api.soundclo
 This package is designed to be easily used by AI coding agents:
 
 - **[`llms.txt`](llms.txt)** — Complete method reference in plain text, optimized for LLM consumption
+- **[`llms-full.txt`](llms-full.txt)** — Full signatures, types, and class namespace methods
 - **[`AGENTS.md`](AGENTS.md)** — Setup guide, common patterns, and gotchas for AI agents
 - **Full JSDoc** with `@example` on every export — works great with GitHub Copilot, Cursor, etc.
 
@@ -598,7 +615,7 @@ See [CHANGELOG.md](CHANGELOG.md) for release history.
 ## Related Packages
 
 - **[soundcloud-api-ts-next](https://github.com/twin-paws/soundcloud-api-ts-next)** — React hooks + Next.js API route handlers built on this package. Use it when building Next.js apps that need SoundCloud data with secrets kept server-side.
-- **[soundcloud-widget-react](https://github.com/twin-paws/soundcloud-widget-react)** — React component for the SoundCloud HTML5 Widget API. Embed SoundCloud players and control playback programmatically. Complements this package for full SoundCloud integration.
+- **[soundcloud-widget-react](https://github.com/twin-paws/soundcloud-widget-react)** — React component for the SoundCloud HTML5 Widget API. Pass `trackId` or `playlistId`; it builds the official `api.soundcloud.com` resource URL. Do not pass `getSoundCloudWidgetUrl()`.
 
 ## Contributing
 

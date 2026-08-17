@@ -12,6 +12,7 @@ describe("searchTracks", () => {
     const r = await searchTracks("tok", "lofi");
     expect(r.collection[0].title).toBe("Hit");
     expect(fn.mock.calls[0][0]).toContain("q=lofi");
+    expect(fn.mock.calls[0][0]).toContain("access=playable");
   });
 
   it("supports pagination", async () => {

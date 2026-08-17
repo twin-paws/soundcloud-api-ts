@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.14.1
+# soundcloud-api-ts v1.15.0
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -17,9 +17,9 @@ const sc = new SoundCloudClient({
   redirectUri: 'https://example.com/callback', // optional, needed for user auth
 });
 
-// Get a client credentials token
+// Get a client credentials token — persist refresh_token; renew with refreshToken()
 const token = await sc.auth.getClientToken();
-sc.setToken(token.access_token);
+sc.setToken(token.access_token, token.refresh_token);
 
 // Fetch a track
 const track = await sc.tracks.getTrack(123456);
@@ -37,6 +37,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     getClientToken(): Promise<SoundCloudToken>
     getUserToken(code: string, codeVerifier?: string): Promise<SoundCloudToken>
     refreshUserToken(refreshToken: string): Promise<SoundCloudToken>
+    refreshToken(refreshToken: string): Promise<SoundCloudToken>  // alias — CC and user tokens
     signOut(accessToken: string): Promise<void>
 
 > **Note (v1.13.3+)**: SoundCloud's `/oauth/token` requirements differ **per grant type**: `client_credentials` requires `Authorization: Basic` (body credentials return `401 invalid_client`), while `refresh_token` and `authorization_code` require `client_id`/`client_secret` in the request body. `getClientToken` sends Basic Auth; `refreshUserToken`/`getUserToken` send body credentials. (v1.13.2 briefly used body credentials for all grants — reversed for `client_credentials` in v1.13.3.)
@@ -55,7 +56,12 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     createComment(trackId: string | number, body: string, timestamp?: number): Promise<SoundCloudComment>
     getLikes(trackId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
     getReposts(trackId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
-    getRelated(trackId: string | number, limit?: number): Promise<SoundCloudTrack[]>
+    getRelated(trackId: string | number, limit?: number): Promise<SoundCloudTrack[]>  // unwraps collection; sends access=playable
+    getRelatedPage(trackId, options?: { limit?, access?, token? }): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+    getStreamUrl(trackId: string | number): Promise<string>   // 302 Location
+    getPreviewUrl(trackId: string | number): Promise<string>  // 302 Location
+    upload(params: UploadTrackParams): Promise<SoundCloudTrack>  // user token; multipart
+    updateStorefront(trackId, params: StorefrontUpdateParams): Promise<SoundCloudStorefront>
     update(trackId: string | number, params: UpdateTrackParams): Promise<SoundCloudTrack>
     delete(trackId: string | number): Promise<void>
 
@@ -69,6 +75,9 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     getLikesTracks(userId: string | number, limit?: number, cursor?: string): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
     getLikesPlaylists(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
     getWebProfiles(userId: string | number): Promise<SoundCloudWebProfile[]>
+    getRelated(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
+    getRepostsTracks(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+    getRepostsPlaylists(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 
 ### Playlists (sc.playlists)
 
@@ -81,16 +90,21 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
 
 ### Search (sc.search)
 
-    tracks(query: string, pageNumber?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
-    users(query: string, pageNumber?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
-    playlists(query: string, pageNumber?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+    tracks(query: string, pageNumber?: number, options?: { limit?, access?, token? }): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>  // default access=playable
+    users(query: string, pageNumber?: number, options?: { limit?, token? }): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
+    playlists(query: string, pageNumber?: number, options?: { limit?, access?, token? }): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 
 ### Me — Authenticated User (sc.me)
 
     getMe(): Promise<SoundCloudMe>
-    getActivities(limit?: number): Promise<SoundCloudActivitiesResponse>
+    getActivities(limit?: number): Promise<SoundCloudActivitiesResponse>  // deprecated — prefer getFeed
     getActivitiesOwn(limit?: number): Promise<SoundCloudActivitiesResponse>
     getActivitiesTracks(limit?: number): Promise<SoundCloudActivitiesResponse>
+    getFeed(limit?: number, options?: { access? }): Promise<SoundCloudActivitiesResponse>
+    getFeedTracks(limit?: number, options?: { access? }): Promise<SoundCloudActivitiesResponse>
+    getRecentlyPlayedTracks(options?: { access? }): Promise<SoundCloudTrack[]>  // last 25; no pagination
+    getRepostsTracks(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+    getRepostsPlaylists(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
     getLikesTracks(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
     getLikesPlaylists(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
     getFollowings(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
@@ -139,7 +153,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
 ```ts
 const sc = new SoundCloudClient({ clientId: '...', clientSecret: '...' });
 const token = await sc.auth.getClientToken();
-sc.setToken(token.access_token);
+sc.setToken(token.access_token, token.refresh_token);
 ```
 
 ### User Authorization Flow (with PKCE)
@@ -250,7 +264,7 @@ const sc = new SoundCloudClient({
 ## OpenAPI Tooling
 ```bash
 pnpm openapi:sync      # fetch SoundCloud OpenAPI spec → tools/openapi.json + openapi-operations.json
-pnpm openapi:coverage  # compare spec operations to IMPLEMENTED_OPERATIONS in src/client/registry.ts
+pnpm openapi:coverage  # compare live spec operations to IMPLEMENTED_ROUTES (METHOD path) in src/client/registry.ts
 ```
 
 ## Auth Guide
@@ -281,7 +295,7 @@ interface TokenStore {
 
 ## Related Packages
 - soundcloud-api-ts-next — React hooks + Next.js API route handlers. Keeps secrets server-side. https://github.com/twin-paws/soundcloud-api-ts-next
-- soundcloud-widget-react — React component for the SoundCloud HTML5 Widget API (embed + playback control). https://github.com/twin-paws/soundcloud-widget-react
+- soundcloud-widget-react — React widget. Pass `trackId` / `playlistId` (official resource URL). Do not pass `getSoundCloudWidgetUrl()`. https://github.com/twin-paws/soundcloud-widget-react
 
 ## Full Documentation
 

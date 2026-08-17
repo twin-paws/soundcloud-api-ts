@@ -104,10 +104,13 @@ describe("auth", () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
-  it("refreshUserToken throws without redirectUri instead of sending redirect_uri=undefined", async () => {
-    const fn = mockFetch({ json: { access_token: "tok" } });
+  it("refreshUserToken omits redirect_uri when not configured (client-credentials refresh)", async () => {
+    const fn = mockFetch({ json: { access_token: "tok", refresh_token: "rt2" } });
     const client = new SoundCloudClient({ clientId: "cid", clientSecret: "cs" });
-    await expect(client.auth.refreshUserToken("rt")).rejects.toThrow("redirectUri is required");
-    expect(fn).not.toHaveBeenCalled();
+    await client.auth.refreshToken("rt");
+    const body = fn.mock.calls[0][1].body as URLSearchParams;
+    expect(body.get("grant_type")).toBe("refresh_token");
+    expect(body.get("redirect_uri")).toBeNull();
+    expect(body.get("refresh_token")).toBe("rt");
   });
 });

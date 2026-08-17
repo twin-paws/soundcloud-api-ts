@@ -4,6 +4,11 @@
  * @param trackId - The track's numeric ID or string identifier
  * @returns URL-encoded widget embed URL string
  *
+ * **Do not pass this to `soundcloud-widget-react` `<SCWidget url>`.** That
+ * package expects a plain unencoded SoundCloud URL (`permalink_url`) and
+ * encodes it itself. This helper is only for building a widget iframe `src`
+ * query fragment yourself.
+ *
  * @example
  * ```ts
  * import { getSoundCloudWidgetUrl } from 'soundcloud-api-ts';

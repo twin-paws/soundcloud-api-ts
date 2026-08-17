@@ -1,6 +1,5 @@
 {
-  "coverage": 0,
-  "implemented": 51,
-  "total": 0,
-  "note": "Total unknown — SoundCloud OpenAPI spec not publicly accessible. Implemented count reflects registry.ts."
+  "coverage": 81.3,
+  "implemented": 52,
+  "total": 64
 }

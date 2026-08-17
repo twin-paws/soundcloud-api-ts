@@ -7,6 +7,9 @@ import { getMeFollowers } from "../../me/followers.js";
 import { getMePlaylists } from "../../me/playlists.js";
 import { getMeTracks } from "../../me/tracks.js";
 import { getMeConnections } from "../../me/connections.js";
+import { getMeFeed, getMeFeedTracks } from "../../me/feed.js";
+import { getMeRecentlyPlayedTracks } from "../../me/recentlyPlayed.js";
+import { getMeRepostsTracks, getMeRepostsPlaylists } from "../../me/reposts.js";
 
 beforeEach(() => { vi.restoreAllMocks(); });
 
@@ -169,6 +172,89 @@ describe("getMePlaylists", () => {
     const fn = mockFetch({ json: paginated });
     await getMePlaylists("tok", 15);
     expect(fn.mock.calls[0][0]).toContain("limit=15");
+  });
+});
+
+describe("getMeFeed", () => {
+  it("fetches the current feed with limit and access", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getMeFeed("tok", 10, "playable");
+    expect(fn.mock.calls[0][0]).toContain("/me/feed?");
+    expect(fn.mock.calls[0][0]).toContain("limit=10");
+    expect(fn.mock.calls[0][0]).toContain("access=playable");
+  });
+
+  it("works without query params", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getMeFeed("tok");
+    expect(fn.mock.calls[0][0]).toMatch(/\/me\/feed$/);
+  });
+});
+
+describe("getMeFeedTracks", () => {
+  it("fetches the track feed", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getMeFeedTracks("tok", 5, "playable");
+    expect(fn.mock.calls[0][0]).toContain("/me/feed/tracks?");
+    expect(fn.mock.calls[0][0]).toContain("limit=5");
+    expect(fn.mock.calls[0][0]).toContain("access=playable");
+  });
+
+  it("works without query params", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getMeFeedTracks("tok");
+    expect(fn.mock.calls[0][0]).toMatch(/\/me\/feed\/tracks$/);
+  });
+});
+
+describe("getMeRecentlyPlayedTracks", () => {
+  it("unwraps a collection", async () => {
+    mockFetch({ json: { collection: [{ id: 1, title: "Last" }] } });
+    const r = await getMeRecentlyPlayedTracks("tok");
+    expect(r).toEqual([{ id: 1, title: "Last" }]);
+  });
+
+  it("returns a bare array and honors access", async () => {
+    const fn = mockFetch({ json: [{ id: 2, title: "Bare" }] });
+    const r = await getMeRecentlyPlayedTracks("tok", "playable");
+    expect(r).toEqual([{ id: 2, title: "Bare" }]);
+    expect(fn.mock.calls[0][0]).toContain("/me/recently-played/tracks?access=playable");
+  });
+
+  it("returns [] when collection is missing", async () => {
+    mockFetch({ json: { next_href: null } });
+    expect(await getMeRecentlyPlayedTracks("tok")).toEqual([]);
+  });
+});
+
+describe("getMeRepostsTracks", () => {
+  it("fetches track reposts with limit", async () => {
+    const fn = mockFetch({ json: paginated });
+    await getMeRepostsTracks("tok", 8);
+    expect(fn.mock.calls[0][0]).toContain("/me/reposts/tracks");
+    expect(fn.mock.calls[0][0]).toContain("limit=8");
+  });
+
+  it("works without limit", async () => {
+    const fn = mockFetch({ json: paginated });
+    await getMeRepostsTracks("tok");
+    expect(fn.mock.calls[0][0]).toContain("linked_partitioning=true");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
+});
+
+describe("getMeRepostsPlaylists", () => {
+  it("fetches playlist reposts without limit", async () => {
+    const fn = mockFetch({ json: paginated });
+    await getMeRepostsPlaylists("tok");
+    expect(fn.mock.calls[0][0]).toContain("/me/reposts/playlists");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
+
+  it("works with limit", async () => {
+    const fn = mockFetch({ json: paginated });
+    await getMeRepostsPlaylists("tok", 4);
+    expect(fn.mock.calls[0][0]).toContain("limit=4");
   });
 });
 

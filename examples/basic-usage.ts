@@ -16,14 +16,14 @@ async function main() {
 
   // 2. Obtain a client-credentials token (no user login required)
   const token = await sc.auth.getClientToken();
-  sc.setToken(token.access_token);
+  sc.setToken(token.access_token, token.refresh_token);
 
   // 3. Get a track by ID
   const track = await sc.tracks.getTrack(123456789);
   console.log("Track:", track.title, "by", track.user.username);
 
   // 4. Search for tracks
-  const results = await sc.search.searchTracks("lofi hip hop");
+  const results = await sc.search.tracks("lofi hip hop");
   console.log(`Found ${results.collection.length} tracks`);
   for (const t of results.collection) {
     console.log(` - ${t.title}`);
@@ -34,7 +34,7 @@ async function main() {
   console.log("User:", user.username);
 
   // 6. Get a user's tracks
-  const userTracks = await sc.users.getUserTracks(user.id);
+  const userTracks = await sc.users.getTracks(user.id);
   console.log(`${user.username} has uploaded:`);
   for (const t of userTracks.collection) {
     console.log(` - ${t.title}`);

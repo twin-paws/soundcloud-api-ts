@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.14.1
+# soundcloud-api-ts v1.15.0
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -18,7 +18,7 @@ const sc = new SoundCloudClient({
 });
 
 const token = await sc.auth.getClientToken();
-sc.setToken(token.access_token);
+sc.setToken(token.access_token, token.refresh_token);
 
 const track = await sc.tracks.getTrack(123456);
 ```
@@ -56,9 +56,16 @@ function getUserToken(
 function refreshUserToken(
   clientId: string,
   clientSecret: string,
-  redirectUri: string,
+  redirectUri: string | undefined,
   refreshToken: string,
 ): Promise<SoundCloudToken>
+
+function refreshToken(
+  clientId: string,
+  clientSecret: string,
+  redirectUri: string | undefined,
+  refreshToken: string,
+): Promise<SoundCloudToken>  // alias of refreshUserToken — CC and user tokens
 
 function signOut(accessToken: string): Promise<void>
 
@@ -93,12 +100,20 @@ function getUserLikesTracks(token: string, userId: string | number, limit?: numb
 function getUserLikesPlaylists(token: string, userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 
 function getUserWebProfiles(token: string, userId: string | number): Promise<SoundCloudWebProfile[]>
+
+function getRelatedUsers(token: string, userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
+
+function getUserRepostsTracks(token: string, userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+
+function getUserRepostsPlaylists(token: string, userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 ```
 
 ### Tracks
 
 ```ts
 function getTrack(token: string, trackId: string | number): Promise<SoundCloudTrack>
+
+function getTracks(token: string, ids: (string | number)[]): Promise<SoundCloudTrack[]>  // max 200 IDs (throws above)
 
 function getTrackComments(token: string, trackId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudComment>>
 
@@ -108,15 +123,25 @@ function getTrackLikes(token: string, trackId: string | number, limit?: number):
 
 function getTrackReposts(token: string, trackId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
 
-function getRelatedTracks(token: string, trackId: string | number, limit?: number): Promise<SoundCloudTrack[]>
+function getRelatedTracks(token: string, trackId: string | number, limit?: number): Promise<SoundCloudTrack[]>  // unwraps collection; sends access=playable
+
+function getRelatedTracksPage(token: string, trackId: string | number, options?: RelatedTracksOptions): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 
 function getTrackStreams(token: string, trackId: string | number): Promise<SoundCloudStreams>
+
+function getTrackStreamUrl(token: string, trackId: string | number): Promise<string>  // 302 Location
+
+function getTrackPreviewUrl(token: string, trackId: string | number): Promise<string>  // 302 Location
 
 function likeTrack(token: string, trackId: string | number): Promise<boolean>
 
 function unlikeTrack(token: string, trackId: string | number): Promise<boolean>
 
+function uploadTrack(token: string, params: UploadTrackParams): Promise<SoundCloudTrack>  // user token; multipart
+
 function updateTrack(token: string, trackId: string | number, params: UpdateTrackParams): Promise<SoundCloudTrack>
+
+function updateTrackStorefront(token: string, trackId: string | number, params: StorefrontUpdateParams): Promise<SoundCloudStorefront>
 
 function deleteTrack(token: string, trackId: string | number): Promise<void>
 ```
@@ -140,21 +165,31 @@ function deletePlaylist(token: string, playlistId: string | number): Promise<voi
 ### Search
 
 ```ts
-function searchTracks(token: string, query: string, pageNumber?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+function searchTracks(token: string, query: string, pageNumber?: number, options?: SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>  // default access=playable
 
-function searchUsers(token: string, query: string, pageNumber?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
+function searchUsers(token: string, query: string, pageNumber?: number, options?: SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
 
-function searchPlaylists(token: string, query: string, pageNumber?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+function searchPlaylists(token: string, query: string, pageNumber?: number, options?: SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 ```
 
 ### Me (Authenticated User)
 
 ```ts
-function getMeActivities(token: string, limit?: number): Promise<SoundCloudActivitiesResponse>
+function getMeActivities(token: string, limit?: number): Promise<SoundCloudActivitiesResponse>  // deprecated — prefer getMeFeed
 
 function getMeActivitiesOwn(token: string, limit?: number): Promise<SoundCloudActivitiesResponse>
 
 function getMeActivitiesTracks(token: string, limit?: number): Promise<SoundCloudActivitiesResponse>
+
+function getMeFeed(token: string, limit?: number, access?: string): Promise<SoundCloudActivitiesResponse>
+
+function getMeFeedTracks(token: string, limit?: number, access?: string): Promise<SoundCloudActivitiesResponse>
+
+function getMeRecentlyPlayedTracks(token: string, access?: string): Promise<SoundCloudTrack[]>  // last 25; no pagination
+
+function getMeRepostsTracks(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+
+function getMeRepostsPlaylists(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 
 function getMeLikesTracks(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 
@@ -173,6 +208,8 @@ function getMeFollowers(token: string, limit?: number): Promise<SoundCloudPagina
 function getMePlaylists(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 
 function getMeTracks(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+
+function getMeConnections(token: string): Promise<SoundCloudConnection[]>
 ```
 
 ### Likes
@@ -370,6 +407,7 @@ getAuthorizationUrl(options?: { state?: string; codeChallenge?: string }): strin
 getClientToken(): Promise<SoundCloudToken>
 getUserToken(code: string, codeVerifier?: string): Promise<SoundCloudToken>
 refreshUserToken(refreshToken: string): Promise<SoundCloudToken>
+refreshToken(refreshToken: string): Promise<SoundCloudToken>  // alias — CC and user tokens
 signOut(accessToken: string): Promise<void>
 ```
 
@@ -379,9 +417,14 @@ signOut(accessToken: string): Promise<void>
 
 ```ts
 getMe(options?: TokenOption): Promise<SoundCloudMe>
-getActivities(limit?: number, options?: TokenOption): Promise<SoundCloudActivitiesResponse>
+getActivities(limit?: number, options?: TokenOption): Promise<SoundCloudActivitiesResponse>  // deprecated — prefer getFeed
 getActivitiesOwn(limit?: number, options?: TokenOption): Promise<SoundCloudActivitiesResponse>
 getActivitiesTracks(limit?: number, options?: TokenOption): Promise<SoundCloudActivitiesResponse>
+getFeed(limit?: number, options?: TokenOption & { access?: string }): Promise<SoundCloudActivitiesResponse>
+getFeedTracks(limit?: number, options?: TokenOption & { access?: string }): Promise<SoundCloudActivitiesResponse>
+getRecentlyPlayedTracks(options?: TokenOption & { access?: string }): Promise<SoundCloudTrack[]>  // last 25
+getRepostsTracks(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+getRepostsPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 getLikesTracks(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 getLikesPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 getFollowings(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
@@ -405,6 +448,9 @@ getPlaylists(userId: string | number, limit?: number, options?: TokenOption): Pr
 getLikesTracks(userId: string | number, limit?: number, cursor?: string, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 getLikesPlaylists(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 getWebProfiles(userId: string | number, options?: TokenOption): Promise<SoundCloudWebProfile[]>
+getRelated(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
+getRepostsTracks(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+getRepostsPlaylists(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 ```
 
 #### sc.tracks
@@ -417,7 +463,12 @@ getComments(trackId: string | number, limit?: number, options?: TokenOption): Pr
 createComment(trackId: string | number, body: string, timestamp?: number, options?: TokenOption): Promise<SoundCloudComment>
 getLikes(trackId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
 getReposts(trackId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
-getRelated(trackId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudTrack[]>
+getRelated(trackId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudTrack[]>  // unwraps collection; access=playable
+getRelatedPage(trackId: string | number, options?: TokenOption & { limit?: number; access?: string }): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
+getStreamUrl(trackId: string | number, options?: TokenOption): Promise<string>  // 302 Location
+getPreviewUrl(trackId: string | number, options?: TokenOption): Promise<string>  // 302 Location
+upload(params: UploadTrackParams, options?: TokenOption): Promise<SoundCloudTrack>  // user token; multipart
+updateStorefront(trackId: string | number, params: StorefrontUpdateParams, options?: TokenOption): Promise<SoundCloudStorefront>
 update(trackId: string | number, params: UpdateTrackParams, options?: TokenOption): Promise<SoundCloudTrack>
 delete(trackId: string | number, options?: TokenOption): Promise<void>
 ```
@@ -454,9 +505,9 @@ unrepostPlaylist(playlistId: string | number, options?: TokenOption): Promise<bo
 #### sc.search
 
 ```ts
-tracks(query: string, pageNumber?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
-users(query: string, pageNumber?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
-playlists(query: string, pageNumber?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+tracks(query: string, pageNumber?: number, options?: TokenOption & SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>  // default access=playable
+users(query: string, pageNumber?: number, options?: TokenOption & SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
+playlists(query: string, pageNumber?: number, options?: TokenOption & SearchQueryOptions): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 ```
 
 #### sc.resolve
@@ -511,6 +562,39 @@ interface UpdateTrackParams {
   tag_list?: string;
   sharing?: "public" | "private";
 }
+
+interface UploadTrackParams {
+  title: string;
+  asset_data: Blob | File | Uint8Array | ArrayBuffer;
+  filename?: string;
+  artist?: string;
+  permalink?: string;
+  sharing?: "public" | "private";
+  description?: string;
+  genre?: string;
+  tag_list?: string;
+}
+
+interface RelatedTracksOptions {
+  limit?: number;
+  access?: string;  // default "playable"
+}
+
+interface SearchQueryOptions {
+  limit?: number;   // 1–200, default 10
+  access?: string;  // track search defaults to "playable"
+}
+
+interface StorefrontUpdateParams {
+  title: string;
+  type: StorefrontType;
+  link: string;
+  link_title?: string;
+  description?: string;
+  price?: string;
+}
+
+type StorefrontType = "digital" | "vinyl" | "cd" | "cassette" | "apparel" | "sample_pack" | "subscription" | "live_event" | "live_stream" | "other";
 
 interface CreatePlaylistParams {
   title: string;
@@ -775,7 +859,7 @@ Options: --json (raw JSON), --url (play: print URL only), --help
 
 ## Related packages
 - soundcloud-api-ts-next — React hooks + Next.js API route handlers (built on this package). https://github.com/twin-paws/soundcloud-api-ts-next
-- soundcloud-widget-react — React component for the SoundCloud HTML5 Widget API (embed + playback control). https://github.com/twin-paws/soundcloud-widget-react
+- soundcloud-widget-react — React widget. Pass `trackId` / `playlistId` (official `api.soundcloud.com` resource URL). Do not pass `getSoundCloudWidgetUrl()`. https://github.com/twin-paws/soundcloud-widget-react
 
 ## Links
 - npm: https://www.npmjs.com/package/soundcloud-api-ts

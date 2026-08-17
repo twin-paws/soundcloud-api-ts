@@ -13,7 +13,7 @@
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { IMPLEMENTED_OPERATIONS } from "../src/client/registry.js";
+import { IMPLEMENTED_ROUTES } from "../src/client/registry.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -64,9 +64,10 @@ function main() {
     return;
   }
 
-  const implementedSet = new Set(IMPLEMENTED_OPERATIONS);
-  const implemented = allOps.filter((op) => implementedSet.has(op.operationId));
-  const notImplemented = allOps.filter((op) => !implementedSet.has(op.operationId));
+  const implementedSet = new Set(IMPLEMENTED_ROUTES);
+  const routeKey = (op: OpenAPIOperation) => `${op.method} ${op.path}`;
+  const implemented = allOps.filter((op) => implementedSet.has(routeKey(op)));
+  const notImplemented = allOps.filter((op) => !implementedSet.has(routeKey(op)));
 
   const coveragePct = Math.round((implemented.length / total) * 1000) / 10;
 
@@ -74,17 +75,17 @@ function main() {
 
   process.stdout.write(`Implemented (${implemented.length}):\n`);
   for (const op of implemented) {
-    process.stdout.write(`  ✅ ${op.operationId} — ${op.method} ${op.path}\n`);
+    process.stdout.write(`  ✅ ${op.method} ${op.path}\n`);
   }
 
   process.stdout.write(`\nNot yet wrapped (${notImplemented.length}):\n`);
   for (const op of notImplemented) {
-    process.stdout.write(`  ⬜ ${op.operationId} — ${op.method} ${op.path}\n`);
+    process.stdout.write(`  ⬜ ${op.method} ${op.path}\n`);
   }
 
-  // Also log any IMPLEMENTED_OPERATIONS entries that don't appear in the spec
-  const specIds = new Set(allOps.map((op) => op.operationId));
-  const unknownImpl = IMPLEMENTED_OPERATIONS.filter((id) => !specIds.has(id));
+  // Also log any IMPLEMENTED_ROUTES entries that don't appear in the spec
+  const specIds = new Set(allOps.map((op) => `${op.method} ${op.path}`));
+  const unknownImpl = IMPLEMENTED_ROUTES.filter((id) => !specIds.has(id));
   if (unknownImpl.length > 0) {
     process.stdout.write(`\nIn registry but not in spec (${unknownImpl.length}):\n`);
     for (const id of unknownImpl) {

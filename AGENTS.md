@@ -6,6 +6,9 @@ Instructions for AI coding agents working with this package.
 
 - **Node.js 20+** required (uses native `fetch` and Web Crypto)
 - No environment variables are read by the package — all config is passed to the constructor
+- A SoundCloud **Artist Pro** account is required to register an app and get a Client ID / secret: https://developers.soundcloud.com/docs/api/register-app
+- Official agent docs: https://developers.soundcloud.com/docs/building-with-ai · https://developers.soundcloud.com/docs/llm-context
+- Live OpenAPI: https://developers.soundcloud.com/docs/api/explorer/api.json · https://raw.githubusercontent.com/soundcloud/api/master/openapi/api.yaml
 
 ```bash
 npm install soundcloud-api-ts
@@ -29,7 +32,7 @@ const sc = new SoundCloudClient({
 
 ```ts
 const token = await sc.auth.getClientToken();
-sc.setToken(token.access_token);
+sc.setToken(token.access_token, token.refresh_token); // persist refresh — do not mint a new CC token every boot
 // Now you can call public endpoints: tracks, users, search, playlists, resolve
 ```
 
@@ -39,7 +42,7 @@ Some endpoints require a user token (not just client credentials):
 - All `sc.me.*` endpoints
 - `sc.likes.*` (likeTrack, unlikeTrack, likePlaylist, unlikePlaylist)
 - `sc.reposts.*` (repostTrack, unrepostTrack, repostPlaylist, unrepostPlaylist)
-- `sc.tracks.createComment()`, `sc.tracks.update()`, `sc.tracks.delete()`
+- `sc.tracks.createComment()`, `sc.tracks.update()`, `sc.tracks.delete()`, `sc.tracks.upload()`, `sc.tracks.updateStorefront()`
 - `sc.playlists.create()`, `sc.playlists.update()`, `sc.playlists.delete()`
 - `sc.me.follow()`, `sc.me.unfollow()`
 
@@ -124,7 +127,7 @@ try {
 ## Gotchas
 
 1. **Token required for ALL requests** — even public endpoints like `getTrack` need at least a client credentials token. Call `setToken()` first.
-2. **User token vs client token** — write operations (like, repost, comment, follow, create/update/delete) require a user token obtained via the authorization code flow. A client credentials token won't work.
+2. **User token vs client token** — write operations (like, repost, comment, follow, create/update/delete, upload) require a user token obtained via the authorization code flow. A client credentials token won't work. Client-credentials **responses include `refresh_token`** — persist it and call `sc.auth.refreshToken()` (same grant as `refreshUserToken`). New `getClientToken()` calls are limited to 50 / 12h / app and 30 / 1h / IP. Refresh tokens are single-use.
 3. **Rate limits exist** — SoundCloud returns 429 when rate limited. The client retries 429, 5xx, and thrown `fetch` (network/DNS) with exponential backoff (configurable via `maxRetries` and `retryBaseDelay`). `Retry-After` is honored (capped 60s). A 200 with invalid JSON throws `SoundCloudError`.
 4. **Auto token refresh** — pass `onTokenRefresh` in the config to automatically refresh expired tokens on 401. Concurrent 401s share a single in-flight refresh. Persist the new refresh token atomically in that callback or you lose the session. `setToken(access)` (one argument) clears any stored refresh token.
 5. **Request telemetry** — pass `onRequest` in the config to receive `SCRequestTelemetry` after every client-namespace request (method, path, duration, status, retries, error), including pagination and retries. NOT emitted for `sc.raw.*` or `auth.signOut`.
@@ -137,10 +140,10 @@ try {
 12. **`sc.me.getConnections()`** — list linked social accounts. Requires user token. May require elevated API access.
 13. **TokenProvider / TokenStore interfaces** — in `src/auth/token-provider.ts`. Implement to integrate with NextAuth, Clerk, Redis, or any session framework. See `docs/auth-guide.md`.
 14. **Auth guide** — `docs/auth-guide.md` covers: client creds vs user tokens, full PKCE flow, auto-refresh, NextAuth/Clerk bridge patterns, 401 troubleshooting. Prefer `err.isInvalidGrant` / `err.isPermanentAuthError` over checking HTTP status alone. `errorCode` is `error_code` or OAuth `error`.
-15. **OpenAPI tooling** — `pnpm openapi:sync` fetches the spec (if available), `pnpm openapi:coverage` reports implemented vs total. `src/client/registry.ts` is the source of truth — update it when adding new endpoints.
+15. **OpenAPI tooling** — `pnpm openapi:sync` fetches the live spec (`docs/api/explorer/api.json` and `openapi/api.yaml`). `pnpm openapi:coverage` compares `IMPLEMENTED_ROUTES` (`METHOD path` in `src/client/registry.ts`) against that spec. Current baseline: 52 of 64 current operations. Deprecated aliases (`/favorites`, nested following GETs) are not wrapped. Update `IMPLEMENTED_ROUTES` when adding endpoints.
 16. **No env vars** — the package reads no environment variables. Pass `clientId`, `clientSecret`, and `redirectUri` directly to the constructor.
 17. **IDs can be numbers or strings** — all ID parameters accept `string | number`.
-18. **Search pagination** — search uses zero-based `pageNumber` (10 results per page), not cursor-based pagination.
+18. **Search pagination** — search uses zero-based `pageNumber` (`offset = limit * pageNumber`). Default `limit` is 10 (1–200). Track search defaults to `access=playable`.
 
 ## Project Structure (for contributors)
 
@@ -153,7 +156,7 @@ src/
   client/raw.ts                — RawClient (sc.raw escape hatch)
   client/dedupe.ts             — InFlightDeduper (GET coalescing)
   client/cache.ts              — SoundCloudCache interface
-  client/registry.ts           — IMPLEMENTED_OPERATIONS (OpenAPI coverage tracking)
+  client/registry.ts           — IMPLEMENTED_ROUTES (METHOD path; OpenAPI coverage) + IMPLEMENTED_OPERATIONS (legacy aliases)
   auth/                        — Standalone auth functions + PKCE
   auth/token-provider.ts       — TokenProvider + TokenStore interfaces
   users/                       — Standalone user functions (getMe, getUser, etc.)
@@ -195,8 +198,9 @@ pnpm docs        # TypeDoc → API docs site
 2. Export it from `src/<category>/index.ts`
 3. Re-export from `src/index.ts`
 4. Add a namespaced method in `SoundCloudClient` (in `src/client/SoundCloudClient.ts`)
-5. Add tests in `src/<category>/__tests__/`
-6. Update `llms.txt` and `llms-full.txt` with the new function signature
+5. Add tests in `src/<category>/__tests__/` (or the matching `src/__tests__/` file)
+6. Add `"METHOD /path"` to `IMPLEMENTED_ROUTES` in `src/client/registry.ts`
+7. Update `llms.txt` and `llms-full.txt` with the new function signature
 
 ## Publishing
 
@@ -209,6 +213,7 @@ Uses **Trusted Publishing** via GitHub Releases:
 ## Related Packages
 
 - [soundcloud-api-ts-next](https://github.com/twin-paws/soundcloud-api-ts-next) — React hooks + Next.js API routes (depends on this package)
+- [soundcloud-widget-react](https://github.com/twin-paws/soundcloud-widget-react) — React embed. Pass `trackId` / `playlistId`, not `getSoundCloudWidgetUrl()`
 
 ## Full Documentation
 

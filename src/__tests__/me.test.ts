@@ -75,6 +75,65 @@ describe("me", () => {
     expect(fn.mock.calls[0][1].method).toBe("DELETE");
   });
 
+  it("getFeed calls /me/feed", async () => {
+    const fn = mockFetch({ json: { collection: [] } });
+    await client.me.getFeed(10);
+    expect(fn.mock.calls[0][0]).toContain("/me/feed?");
+    expect(fn.mock.calls[0][0]).toContain("limit=10");
+  });
+
+  it("getFeedTracks calls /me/feed/tracks", async () => {
+    const fn = mockFetch({ json: { collection: [] } });
+    await client.me.getFeedTracks();
+    expect(fn.mock.calls[0][0]).toContain("/me/feed/tracks");
+  });
+
+  it("getRecentlyPlayedTracks unwraps a collection", async () => {
+    mockFetch({ json: { collection: [{ id: 1, title: "Last" }] } });
+    const r = await client.me.getRecentlyPlayedTracks();
+    expect(r).toEqual([{ id: 1, title: "Last" }]);
+  });
+
+  it("getRecentlyPlayedTracks returns a bare array and honors access", async () => {
+    const fn = mockFetch({ json: [{ id: 2, title: "Bare" }] });
+    const r = await client.me.getRecentlyPlayedTracks({ access: "playable" });
+    expect(r).toEqual([{ id: 2, title: "Bare" }]);
+    expect(fn.mock.calls[0][0]).toContain("access=playable");
+  });
+
+  it("getRecentlyPlayedTracks returns [] when collection is missing", async () => {
+    mockFetch({ json: { next_href: null } });
+    expect(await client.me.getRecentlyPlayedTracks()).toEqual([]);
+  });
+
+  it("getFeed includes access when set", async () => {
+    const fn = mockFetch({ json: { collection: [] } });
+    await client.me.getFeed(undefined, { access: "playable" });
+    expect(fn.mock.calls[0][0]).toContain("/me/feed?");
+    expect(fn.mock.calls[0][0]).toContain("access=playable");
+  });
+
+  it("getFeedTracks includes access when set", async () => {
+    const fn = mockFetch({ json: { collection: [] } });
+    await client.me.getFeedTracks(3, { access: "playable" });
+    expect(fn.mock.calls[0][0]).toContain("/me/feed/tracks?");
+    expect(fn.mock.calls[0][0]).toContain("limit=3");
+    expect(fn.mock.calls[0][0]).toContain("access=playable");
+  });
+
+  it("getRepostsTracks calls /me/reposts/tracks", async () => {
+    const fn = mockFetch({ json: { collection: [] } });
+    await client.me.getRepostsTracks(5);
+    expect(fn.mock.calls[0][0]).toContain("/me/reposts/tracks");
+    expect(fn.mock.calls[0][0]).toContain("limit=5");
+  });
+
+  it("getRepostsPlaylists calls /me/reposts/playlists", async () => {
+    const fn = mockFetch({ json: { collection: [] } });
+    await client.me.getRepostsPlaylists();
+    expect(fn.mock.calls[0][0]).toContain("/me/reposts/playlists");
+  });
+
   it("getConnections calls /me/connections", async () => {
     const fn = mockFetch({ json: [{ id: 1, service: "twitter", display_name: "myhandle", kind: "connection", created_at: "", uri: "" }] });
     const r = await client.me.getConnections();

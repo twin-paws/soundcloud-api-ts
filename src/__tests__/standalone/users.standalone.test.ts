@@ -9,6 +9,9 @@ import { getUserPlaylists } from "../../users/getPlaylists.js";
 import { getUserLikesTracks } from "../../users/getLikesTracks.js";
 import { getUserLikesPlaylists } from "../../users/getLikesPlaylists.js";
 import { getUserWebProfiles } from "../../users/getWebProfiles.js";
+import { getRelatedUsers } from "../../users/getRelated.js";
+import { getUserRepostsTracks } from "../../users/getRepostsTracks.js";
+import { getUserRepostsPlaylists } from "../../users/getRepostsPlaylists.js";
 
 beforeEach(() => { vi.restoreAllMocks(); });
 
@@ -129,5 +132,53 @@ describe("getUserWebProfiles", () => {
     const profiles = await getUserWebProfiles("tok", 123);
     expect(profiles[0].service).toBe("twitter");
     expect(fn.mock.calls[0][0]).toContain("/users/123/web-profiles");
+  });
+});
+
+describe("getRelatedUsers", () => {
+  it("fetches related artists with limit", async () => {
+    const fn = mockFetch({ json: { collection: [{ id: 7 }], next_href: null } });
+    const r = await getRelatedUsers("tok", 123, 10);
+    expect(r.collection[0].id).toBe(7);
+    expect(fn.mock.calls[0][0]).toContain("/users/123/related");
+    expect(fn.mock.calls[0][0]).toContain("linked_partitioning=true");
+    expect(fn.mock.calls[0][0]).toContain("limit=10");
+  });
+
+  it("works without limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getRelatedUsers("tok", 123);
+    expect(fn.mock.calls[0][0]).toContain("linked_partitioning=true");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
+});
+
+describe("getUserRepostsTracks", () => {
+  it("fetches track reposts with limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getUserRepostsTracks("tok", 123, 8);
+    expect(fn.mock.calls[0][0]).toContain("/users/123/reposts/tracks");
+    expect(fn.mock.calls[0][0]).toContain("limit=8");
+  });
+
+  it("works without limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getUserRepostsTracks("tok", 123);
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
+});
+
+describe("getUserRepostsPlaylists", () => {
+  it("fetches playlist reposts without limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getUserRepostsPlaylists("tok", 123);
+    expect(fn.mock.calls[0][0]).toContain("/users/123/reposts/playlists");
+    expect(fn.mock.calls[0][0]).not.toContain("limit=");
+  });
+
+  it("works with limit", async () => {
+    const fn = mockFetch({ json: { collection: [], next_href: null } });
+    await getUserRepostsPlaylists("tok", 123, 6);
+    expect(fn.mock.calls[0][0]).toContain("limit=6");
   });
 });
