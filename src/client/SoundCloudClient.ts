@@ -10,6 +10,7 @@ import type {
   SoundCloudMe,
   SoundCloudTrack,
   SoundCloudPlaylist,
+  SoundCloudSystemPlaylist,
   SoundCloudComment,
   SoundCloudStreams,
   SoundCloudWebProfile,
@@ -24,6 +25,7 @@ import type { SearchQueryOptions } from "../search/query.js";
 import { buildSearchQuery } from "../search/query.js";
 import type { CreatePlaylistParams } from "../playlists/createPlaylist.js";
 import type { UpdatePlaylistParams } from "../playlists/updatePlaylist.js";
+import { systemPlaylistPath, type SystemPlaylistOptions } from "../playlists/getSystemPlaylist.js";
 
 /**
  * Configuration options for creating a {@link SoundCloudClient} instance.
@@ -482,6 +484,28 @@ export namespace SoundCloudClient {
       });
       if (!res.ok) throw new Error(`Sign-out failed: ${res.status}`);
     }
+
+    /**
+     * Revoke OAuth access for this application.
+     *
+     * Invalidates the access tokens of the client application that issued
+     * `accessToken`. Unlike {@link signOut}, this hits the regular
+     * `api.soundcloud.com` host with a Bearer token.
+     *
+     * @param accessToken - An OAuth access token issued to your application
+     * @throws {SoundCloudError} 400 when disconnect is not supported for this token, 401 when the token is invalid
+     *
+     * @example
+     * ```ts
+     * await sc.auth.disconnect(sc.accessToken!);
+     * sc.clearToken();
+     * ```
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/oauth
+     */
+    async disconnect(accessToken: string): Promise<void> {
+      await this.fetch<unknown>({ path: "/disconnect", method: "POST", token: accessToken });
+    }
   }
 
   /**
@@ -662,6 +686,21 @@ export namespace SoundCloudClient {
     async getLikesPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>> {
       const t = resolveToken(this.getToken, options?.token);
       return this.fetch({ path: `/me/likes/playlists?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
+    }
+
+    /**
+     * Get system playlists (stations) liked by the authenticated user.
+     *
+     * @param limit - Maximum number of system playlists per page
+     * @param options - Optional token override
+     * @returns Paginated list of liked system playlists
+     * @throws {SoundCloudError} When the API returns an error
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/me
+     */
+    async getLikesSystemPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudSystemPlaylist>> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch({ path: `/me/likes/system-playlists?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
     }
 
     /**
@@ -925,6 +964,22 @@ export namespace SoundCloudClient {
     async getLikesPlaylists(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>> {
       const t = resolveToken(this.getToken, options?.token);
       return this.fetch({ path: `/users/${userId}/likes/playlists?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
+    }
+
+    /**
+     * Get system playlists (stations) liked by a user.
+     *
+     * @param userId - The user's numeric ID or URN
+     * @param limit - Maximum number of system playlists per page
+     * @param options - Optional token override
+     * @returns Paginated list of liked system playlists
+     * @throws {SoundCloudError} When the API returns an error
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/users
+     */
+    async getLikesSystemPlaylists(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudSystemPlaylist>> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch({ path: `/users/${userId}/likes/system-playlists?${limit ? `limit=${limit}&` : ""}linked_partitioning=true`, method: "GET", token: t });
     }
 
     /**
@@ -1288,6 +1343,30 @@ export namespace SoundCloudClient {
     async getPlaylist(playlistId: string | number, options?: TokenOption): Promise<SoundCloudPlaylist> {
       const t = resolveToken(this.getToken, options?.token);
       return this.fetch<SoundCloudPlaylist>({ path: `/playlists/${playlistId}`, method: "GET", token: t });
+    }
+
+    /**
+     * Get a system playlist (e.g. a track station or artist station).
+     *
+     * @param id - Full URN (`soundcloud:system-playlists:track-stations:123`) or the identifier portion (`track-stations:123`)
+     * @param options - Optional `access` filter for the playlist's tracks, and token override
+     * @returns The system playlist with its visible tracks
+     * @throws {SoundCloudError} When the system playlist is not found or the API returns an error
+     *
+     * @example
+     * ```ts
+     * const track = await sc.tracks.getTrack(123456);
+     * if (track.station_urn) {
+     *   const station = await sc.playlists.getSystemPlaylist(track.station_urn);
+     *   station.tracks.forEach(t => console.log(t.title));
+     * }
+     * ```
+     *
+     * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/system-playlists
+     */
+    async getSystemPlaylist(id: string, options?: TokenOption & SystemPlaylistOptions): Promise<SoundCloudSystemPlaylist> {
+      const t = resolveToken(this.getToken, options?.token);
+      return this.fetch<SoundCloudSystemPlaylist>({ path: systemPlaylistPath(id, options), method: "GET", token: t });
     }
 
     /**

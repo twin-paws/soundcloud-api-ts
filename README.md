@@ -11,7 +11,7 @@
 [![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen.svg)]()
 [![docs](https://img.shields.io/badge/docs-TypeDoc-blue.svg)](https://twin-paws.github.io/soundcloud-api-ts/)
 [![GitHub stars](https://img.shields.io/github/stars/twin-paws/soundcloud-api-ts)](https://github.com/twin-paws/soundcloud-api-ts)
-[![Endpoints](https://img.shields.io/badge/endpoints-52%2F64%20spec-blue)](https://github.com/twin-paws/soundcloud-api-ts/blob/main/src/client/registry.ts)
+[![Endpoints](https://img.shields.io/badge/endpoints-64%2F68%20spec-blue)](https://github.com/twin-paws/soundcloud-api-ts/blob/main/src/client/registry.ts)
 
 The TypeScript SoundCloud API client built on the official API. Zero runtime dependencies, native `fetch`, OAuth 2.1 + PKCE, production-grade retry and deduplication, pluggable cache, raw escape hatch, and an interactive CLI.
 
@@ -214,6 +214,7 @@ sc.auth.getUserToken(code, codeVerifier?)
 sc.auth.refreshUserToken(refreshToken)
 sc.auth.refreshToken(refreshToken)  // alias — also used for client-credentials tokens
 sc.auth.signOut(accessToken)
+sc.auth.disconnect(accessToken)  // revoke this app's OAuth access (POST /disconnect)
 
 // Me (authenticated user) — primary params first, options last
 sc.me.getMe(options?)
@@ -222,6 +223,7 @@ sc.me.getActivitiesOwn(limit?, options?)
 sc.me.getActivitiesTracks(limit?, options?)
 sc.me.getLikesTracks(limit?, options?)
 sc.me.getLikesPlaylists(limit?, options?)
+sc.me.getLikesSystemPlaylists(limit?, options?)  // liked stations
 sc.me.getFollowings(limit?, options?)
 sc.me.getFollowingsTracks(limit?, options?)
 sc.me.follow(userUrn, options?)
@@ -244,6 +246,7 @@ sc.users.getTracks(userId, limit?, options?)
 sc.users.getPlaylists(userId, limit?, options?)
 sc.users.getLikesTracks(userId, limit?, cursor?, options?)
 sc.users.getLikesPlaylists(userId, limit?, options?)
+sc.users.getLikesSystemPlaylists(userId, limit?, options?)  // liked stations
 sc.users.getWebProfiles(userId, options?)
 sc.users.getRelated(userId, limit?, options?)  // related artists
 sc.users.getRepostsTracks(userId, limit?, options?)
@@ -268,6 +271,7 @@ sc.tracks.delete(trackId, options?)
 
 // Playlists
 sc.playlists.getPlaylist(playlistId, options?)
+sc.playlists.getSystemPlaylist(id, options?)  // track/artist station — pass track.station_urn or user.station_urn
 sc.playlists.getTracks(playlistId, limit?, offset?, options?)
 sc.playlists.getReposts(playlistId, limit?, options?)
 sc.playlists.create(params, options?)

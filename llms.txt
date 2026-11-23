@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.15.0
+# soundcloud-api-ts v1.16.0
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -39,6 +39,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     refreshUserToken(refreshToken: string): Promise<SoundCloudToken>
     refreshToken(refreshToken: string): Promise<SoundCloudToken>  // alias — CC and user tokens
     signOut(accessToken: string): Promise<void>
+    disconnect(accessToken: string): Promise<void>  // POST /disconnect — revokes this app's OAuth access; throws SoundCloudError
 
 > **Note (v1.13.3+)**: SoundCloud's `/oauth/token` requirements differ **per grant type**: `client_credentials` requires `Authorization: Basic` (body credentials return `401 invalid_client`), while `refresh_token` and `authorization_code` require `client_id`/`client_secret` in the request body. `getClientToken` sends Basic Auth; `refreshUserToken`/`getUserToken` send body credentials. (v1.13.2 briefly used body credentials for all grants — reversed for `client_credentials` in v1.13.3.)
 
@@ -74,6 +75,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     getPlaylists(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
     getLikesTracks(userId: string | number, limit?: number, cursor?: string): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
     getLikesPlaylists(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+    getLikesSystemPlaylists(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudSystemPlaylist>>
     getWebProfiles(userId: string | number): Promise<SoundCloudWebProfile[]>
     getRelated(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
     getRepostsTracks(userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
@@ -82,6 +84,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
 ### Playlists (sc.playlists)
 
     getPlaylist(playlistId: string | number): Promise<SoundCloudPlaylist>
+    getSystemPlaylist(id: string, options?: { access?: string }): Promise<SoundCloudSystemPlaylist>  // stations — id is track.station_urn / user.station_urn
     getTracks(playlistId: string | number, limit?: number, offset?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
     getReposts(playlistId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
     create(params: CreatePlaylistParams): Promise<SoundCloudPlaylist>
@@ -107,6 +110,7 @@ Paginated responses return `SoundCloudPaginatedResponse<T>` with `collection: T[
     getRepostsPlaylists(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
     getLikesTracks(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
     getLikesPlaylists(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+    getLikesSystemPlaylists(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudSystemPlaylist>>
     getFollowings(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
     getFollowingsTracks(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
     getFollowers(limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>

@@ -1,4 +1,6 @@
 export { getPlaylist } from "./getPlaylist.js";
+export { getSystemPlaylist } from "./getSystemPlaylist.js";
+export type { SystemPlaylistOptions } from "./getSystemPlaylist.js";
 export { getPlaylistTracks } from "./getTracks.js";
 export { getPlaylistReposts } from "./getReposts.js";
 export { createPlaylist } from "./createPlaylist.js";

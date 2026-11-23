@@ -140,10 +140,12 @@ try {
 12. **`sc.me.getConnections()`** — list linked social accounts. Requires user token. May require elevated API access.
 13. **TokenProvider / TokenStore interfaces** — in `src/auth/token-provider.ts`. Implement to integrate with NextAuth, Clerk, Redis, or any session framework. See `docs/auth-guide.md`.
 14. **Auth guide** — `docs/auth-guide.md` covers: client creds vs user tokens, full PKCE flow, auto-refresh, NextAuth/Clerk bridge patterns, 401 troubleshooting. Prefer `err.isInvalidGrant` / `err.isPermanentAuthError` over checking HTTP status alone. `errorCode` is `error_code` or OAuth `error`.
-15. **OpenAPI tooling** — `pnpm openapi:sync` fetches the live spec (`docs/api/explorer/api.json` and `openapi/api.yaml`). `pnpm openapi:coverage` compares `IMPLEMENTED_ROUTES` (`METHOD path` in `src/client/registry.ts`) against that spec. Current baseline: 52 of 64 current operations. Deprecated aliases (`/favorites`, nested following GETs) are not wrapped. Update `IMPLEMENTED_ROUTES` when adding endpoints.
+15. **OpenAPI tooling** — `pnpm openapi:sync` fetches the live spec (`docs/api/explorer/api.json` and `openapi/api.yaml`). `pnpm openapi:coverage` compares `IMPLEMENTED_ROUTES` (`METHOD path` in `src/client/registry.ts`) against that spec. Current baseline: 64 of 68 current operations. Deprecated aliases (`/favorites`, nested following GETs) are not wrapped. Update `IMPLEMENTED_ROUTES` when adding endpoints.
 16. **No env vars** — the package reads no environment variables. Pass `clientId`, `clientSecret`, and `redirectUri` directly to the constructor.
 17. **IDs can be numbers or strings** — all ID parameters accept `string | number`.
 18. **Search pagination** — search uses zero-based `pageNumber` (`offset = limit * pageNumber`). Default `limit` is 10 (1–200). Track search defaults to `access=playable`.
+19. **Stations (system playlists)** — tracks and users may carry `station_urn` (optional, nullable). Pass it to `sc.playlists.getSystemPlaylist(urn)` to get a `SoundCloudSystemPlaylist` with `tracks`. Liked stations: `sc.me.getLikesSystemPlaylists()` / `sc.users.getLikesSystemPlaylists(userId)`. `sc.likes.likePlaylist` / `unlikePlaylist` also accept a system playlist URN.
+20. **`sc.auth.disconnect(accessToken)`** — `POST /disconnect` on `api.soundcloud.com`; revokes this app's OAuth access for the token's user. Throws `SoundCloudError` (400 when unsupported for the token). Different from `signOut`, which hits `secure.soundcloud.com`.
 
 ## Project Structure (for contributors)
 
