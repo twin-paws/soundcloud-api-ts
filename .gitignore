@@ -8,4 +8,5 @@ coverage/
 docs-site/
 tools/openapi.json
 tools/openapi.yaml
+tools/openapi-operations.json
 examples/oauth-express/node_modules
