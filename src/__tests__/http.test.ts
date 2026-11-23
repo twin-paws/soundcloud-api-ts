@@ -209,6 +209,17 @@ describe("scFetch network and parse failures", () => {
     expect((err as SoundCloudError).message).toMatch(/invalid json/i);
   });
 
+  it("scFetchUrl rethrows the network error after retries are exhausted and reports it", async () => {
+    const fn = vi.fn().mockRejectedValue(new TypeError("fetch failed"));
+    globalThis.fetch = fn as unknown as typeof fetch;
+    const onRequest = vi.fn();
+    await expect(
+      scFetchUrl("https://api.soundcloud.com/next", "tok", { maxRetries: 0, retryBaseDelay: 0 }, onRequest),
+    ).rejects.toThrow(TypeError);
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(onRequest).toHaveBeenCalledWith(expect.objectContaining({ error: "fetch failed", retryCount: 0 }));
+  });
+
   it("scFetchUrl retries a thrown fetch and wraps invalid JSON", async () => {
     const fn = vi.fn()
       .mockRejectedValueOnce(new TypeError("fetch failed"))
