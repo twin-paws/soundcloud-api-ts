@@ -81,6 +81,12 @@ export interface SoundCloudUser {
   /** Display title for the user's website, or null if not set */
   website_title: string | null;
   /**
+   * URN of the user's artist station system playlist
+   * (e.g. "soundcloud:system-playlists:artist-stations:123").
+   * Omitted or null when the user has no public tracks or no station.
+   */
+  station_urn?: string | null;
+  /**
    * Comment count for this user.
    * @deprecated Always returns 0 in current API responses.
    */
@@ -224,6 +230,12 @@ export interface SoundCloudTrack {
   reposts_count: number;
   /** Secret URI for private tracks, or null for public tracks */
   secret_uri: string | null;
+  /**
+   * URN of the track's station system playlist
+   * (e.g. "soundcloud:system-playlists:track-stations:123").
+   * Omitted or null for non-public tracks and tracks without a station.
+   */
+  station_urn?: string | null;
   /** Sharing setting: "public" or "private" */
   sharing: string;
   /** URL to the audio stream (requires authentication) */
@@ -459,6 +471,39 @@ export interface SoundCloudActivitiesResponse {
   next_href: string;
   /** URL to poll for new activities since this response */
   future_href: string;
+}
+
+/**
+ * A SoundCloud system playlist — an algorithmically generated playlist such as
+ * a track station or artist station.
+ *
+ * @see https://developers.soundcloud.com/docs/api/explorer/open-api#/system-playlists
+ */
+export interface SoundCloudSystemPlaylist {
+  /** Resource type, always "system-playlist" */
+  kind: string;
+  /** URN identifier (e.g. "soundcloud:system-playlists:track-stations:123") */
+  urn: string;
+  /** The system playlist's title */
+  title: string;
+  /** The system playlist's description text */
+  description: string;
+  /** Playlist type (e.g. "PLAYLIST") */
+  playlist_type: string;
+  /** Permalink slug (e.g. "track-stations:123") */
+  permalink: string;
+  /** Full URL to the system playlist on soundcloud.com */
+  permalink_url: string;
+  /** ISO 8601 timestamp of the last update, or null */
+  last_updated: string | null;
+  /** Tracking feature name (e.g. "track-stations"), or null */
+  tracking_feature_name: string | null;
+  /** Number of visible tracks in the playlist */
+  track_count: number;
+  /** URN of the query used to generate the playlist, when available */
+  query_urn?: string | null;
+  /** Visible tracks in the playlist */
+  tracks: SoundCloudTrack[];
 }
 
 /**

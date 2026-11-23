@@ -1,4 +1,4 @@
-# soundcloud-api-ts v1.15.0
+# soundcloud-api-ts v1.16.0
 
 > A TypeScript client for the SoundCloud API. Zero dependencies, native fetch, full OAuth 2.1 + PKCE support via `secure.soundcloud.com`.
 
@@ -69,6 +69,9 @@ function refreshToken(
 
 function signOut(accessToken: string): Promise<void>
 
+// POST /disconnect on api.soundcloud.com — revokes this app's OAuth access. Throws SoundCloudError (400 if unsupported for the token).
+function disconnect(accessToken: string): Promise<void>
+
 function getAuthorizationUrl(
   clientId: string,
   redirectUri: string,
@@ -98,6 +101,8 @@ function getUserPlaylists(token: string, userId: string | number, limit?: number
 function getUserLikesTracks(token: string, userId: string | number, limit?: number, cursor?: string): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 
 function getUserLikesPlaylists(token: string, userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+
+function getUserLikesSystemPlaylists(token: string, userId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudSystemPlaylist>>
 
 function getUserWebProfiles(token: string, userId: string | number): Promise<SoundCloudWebProfile[]>
 
@@ -151,6 +156,9 @@ function deleteTrack(token: string, trackId: string | number): Promise<void>
 ```ts
 function getPlaylist(token: string, playlistId: string | number): Promise<SoundCloudPlaylist>
 
+// System playlists (track/artist stations). id: full URN or identifier portion; use track.station_urn / user.station_urn.
+function getSystemPlaylist(token: string, id: string, options?: { access?: string }): Promise<SoundCloudSystemPlaylist>
+
 function getPlaylistTracks(token: string, playlistId: string | number, limit?: number, offset?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 
 function getPlaylistReposts(token: string, playlistId: string | number, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
@@ -194,6 +202,8 @@ function getMeRepostsPlaylists(token: string, limit?: number): Promise<SoundClou
 function getMeLikesTracks(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 
 function getMeLikesPlaylists(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+
+function getMeLikesSystemPlaylists(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudSystemPlaylist>>
 
 function getMeFollowings(token: string, limit?: number): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
 
@@ -409,6 +419,7 @@ getUserToken(code: string, codeVerifier?: string): Promise<SoundCloudToken>
 refreshUserToken(refreshToken: string): Promise<SoundCloudToken>
 refreshToken(refreshToken: string): Promise<SoundCloudToken>  // alias — CC and user tokens
 signOut(accessToken: string): Promise<void>
+disconnect(accessToken: string): Promise<void>
 ```
 
 > **v1.13.3+**: Token request wire format is per grant type: `client_credentials` → `Authorization: Basic` header (body credentials rejected with `401 invalid_client`); `refresh_token` / `authorization_code` → `client_id` + `client_secret` in the form body (Basic Auth rejected). Do not generalize one grant's requirements to the others.
@@ -427,6 +438,7 @@ getRepostsTracks(limit?: number, options?: TokenOption): Promise<SoundCloudPagin
 getRepostsPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 getLikesTracks(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 getLikesPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+getLikesSystemPlaylists(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudSystemPlaylist>>
 getFollowings(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
 getFollowingsTracks(limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 follow(userUrn: string | number, options?: TokenOption): Promise<void>
@@ -447,6 +459,7 @@ getTracks(userId: string | number, limit?: number, options?: TokenOption): Promi
 getPlaylists(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
 getLikesTracks(userId: string | number, limit?: number, cursor?: string, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 getLikesPlaylists(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudPlaylist>>
+getLikesSystemPlaylists(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudSystemPlaylist>>
 getWebProfiles(userId: string | number, options?: TokenOption): Promise<SoundCloudWebProfile[]>
 getRelated(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
 getRepostsTracks(userId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
@@ -477,6 +490,7 @@ delete(trackId: string | number, options?: TokenOption): Promise<void>
 
 ```ts
 getPlaylist(playlistId: string | number, options?: TokenOption): Promise<SoundCloudPlaylist>
+getSystemPlaylist(id: string, options?: TokenOption & { access?: string }): Promise<SoundCloudSystemPlaylist>
 getTracks(playlistId: string | number, limit?: number, offset?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudTrack>>
 getReposts(playlistId: string | number, limit?: number, options?: TokenOption): Promise<SoundCloudPaginatedResponse<SoundCloudUser>>
 create(params: CreatePlaylistParams, options?: TokenOption): Promise<SoundCloudPlaylist>

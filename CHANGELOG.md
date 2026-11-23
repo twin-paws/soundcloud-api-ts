@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.0] - 2026-11-22
+
+Tracks SoundCloud's September 2026 OpenAPI updates (system playlists / stations, `POST /disconnect`). All additive.
+
+### Added
+
+- **`sc.playlists.getSystemPlaylist` / `getSystemPlaylist`** — `GET /system-playlists/{id}` (track and artist stations). Accepts a full URN or the identifier portion, plus an optional `access` filter.
+- **`sc.me.getLikesSystemPlaylists` / `getMeLikesSystemPlaylists`** — `GET /me/likes/system-playlists`, paginated.
+- **`sc.users.getLikesSystemPlaylists` / `getUserLikesSystemPlaylists`** — `GET /users/{id}/likes/system-playlists`, paginated.
+- **`sc.auth.disconnect` / `disconnect`** — `POST /disconnect`; revokes the calling application's OAuth access. Throws `SoundCloudError` on failure.
+- **`SoundCloudSystemPlaylist`** type, and optional **`station_urn`** on `SoundCloudTrack` and `SoundCloudUser`.
+
+### Changed
+
+- OpenAPI coverage is now 64 of 68 current operations; the remaining four are deprecated aliases.
+- Dev tooling: TypeScript 6.0, Vitest 5, tsup 9, ESLint 10. `tsconfig.json` now sets `"types": ["node"]` (TS 6 no longer auto-includes `@types/*`). No runtime changes.
+
 ## [1.15.0] - 2026-08-17
 
 Matches SoundCloud's official [Building with AI](https://developers.soundcloud.com/docs/building-with-ai), [LLM Context](https://developers.soundcloud.com/docs/llm-context), and [API Guide](https://developers.soundcloud.com/docs/api/guide).

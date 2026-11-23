@@ -2,7 +2,7 @@ export { getMeActivities, getMeActivitiesOwn, getMeActivitiesTracks } from "./ac
 export { getMeFeed, getMeFeedTracks } from "./feed.js";
 export { getMeRecentlyPlayedTracks } from "./recentlyPlayed.js";
 export { getMeRepostsTracks, getMeRepostsPlaylists } from "./reposts.js";
-export { getMeLikesTracks, getMeLikesPlaylists } from "./likes.js";
+export { getMeLikesTracks, getMeLikesPlaylists, getMeLikesSystemPlaylists } from "./likes.js";
 export { getMeFollowings, getMeFollowingsTracks, followUser, unfollowUser } from "./followings.js";
 export { getMeFollowers } from "./followers.js";
 export { getMePlaylists } from "./playlists.js";

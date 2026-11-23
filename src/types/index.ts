@@ -9,6 +9,7 @@ export type {
   SoundCloudSubscriptionProduct,
   SoundCloudTrack,
   SoundCloudPlaylist,
+  SoundCloudSystemPlaylist,
   SoundCloudComment,
   SoundCloudCommentUser,
   SoundCloudStreams,
